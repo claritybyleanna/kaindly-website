@@ -81,29 +81,23 @@ test("Home exposes the approved assessment and five-card structure", () => {
   const cards = home.match(/<article class="system-card"[\s\S]*?<\/article>/g) || [];
   assert.equal(cards.length, 5);
 
-  const categories = [
-    "Assessment · Diagnostic",
-    "Discovery · Workflow Mapping",
-    "Enterprise · Bespoke Programs",
-    "Training · Cohort-Based",
-    "Community · Sustained Fluency",
-  ];
-  const badges = [
-    "Enterprise",
-    "Individual",
-    "Enterprise Only",
-    "Enterprise Cohorts",
-    "Open Enrollment",
-    "Organizational Access",
-    "Individual Membership",
+  const expectedCards = [
+    { category: "Assessment · Diagnostic", tags: [["primary", "Enterprise"], ["secondary", "Individual"]] },
+    { category: "Discovery · Workflow Mapping", tags: [["primary", "Enterprise"], ["secondary", "Individual"]] },
+    { category: "Enterprise · Bespoke Programs", tags: [["primary", "Enterprise Only"]] },
+    { category: "Training · Cohort-Based", tags: [["primary", "Enterprise Cohorts"], ["secondary", "Open Enrollment"]] },
+    { category: "Community · Sustained Fluency", tags: [["primary", "Organizational Access"], ["secondary", "Individual Membership"]] },
   ];
 
-  for (const category of categories) assert.match(home, new RegExp(category.replace("·", "\\s*·\\s*")));
-  for (const badge of badges) assert.match(home, new RegExp(`>${badge}<`));
-  for (const card of cards) {
+  for (const [index, card] of cards.entries()) {
     assert.match(card, /class="card-category"/);
     assert.match(card, /class="card-description"/);
     assert.match(card, /class="card-tags"/);
+    const text = card.replace(/<[^>]+>/g, " ").replaceAll("&middot;", "·").replace(/\s+/g, " ");
+    assert.match(text, new RegExp(expectedCards[index].category.replace("·", "\\s*·\\s*")));
+    const tags = [...card.matchAll(/<li class="card-tag card-tag--(primary|secondary)">([^<]+)<\/li>/g)]
+      .map(([, kind, label]) => [kind, label]);
+    assert.deepEqual(tags, expectedCards[index].tags, `card ${index + 1} must have its approved audience badges`);
   }
 });
 
@@ -115,6 +109,23 @@ test("Home stylesheet defines the approved responsive grids", () => {
   assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.stage-rail\s*{[^}]*grid-template-columns:\s*1fr;/);
   assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.system-grid\s*{[^}]*grid-template-columns:\s*1fr;/);
   assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.home-assessment-layout\s*{[^}]*grid-template-columns:\s*1fr;/);
+});
+
+test("Home assessment keeps its compact phone padding through the 640px reset", () => {
+  const css = readFileSync("assets/css/site.css", "utf8");
+  assert.match(
+    css,
+    /@media \(max-width:\s*640px\)\s*{[\s\S]*?\.section\s*{[^}]*padding:\s*76px\s+0;[^}]*}[\s\S]*?\.home-assessment\s*{[^}]*padding-block:\s*64px;/,
+  );
+});
+
+test("Home groups FAAI stages and leaves card categories as visible text", () => {
+  const home = readFileSync("index.html", "utf8");
+  assert.match(home, /<div class="stage-rail" role="group" aria-label="FAAI progression stages" data-reveal>/);
+
+  const categories = home.match(/<p class="card-category"[^>]*>/g) || [];
+  assert.equal(categories.length, 5);
+  for (const category of categories) assert.doesNotMatch(category, /\saria-label=/);
 });
 
 test("every page initializes the newsletter popover exactly once", () => {
