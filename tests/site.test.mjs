@@ -30,6 +30,45 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
+test("Vercel middleware serves the approved maintenance wall on every application route", async () => {
+  assert.equal(existsSync("middleware.js"), true, "Vercel routing middleware is missing");
+
+  const { config, default: maintenanceMiddleware } = await import("../middleware.js");
+  const matcher = new RegExp(`^${config.matcher[0]}$`);
+  for (const route of ["/", "/about/", "/an-unknown-path", "/maintenance.html", "/MAINTENANCE.HTML"]) {
+    assert.equal(matcher.test(route), true, `${route} must invoke the maintenance middleware`);
+  }
+  assert.equal(matcher.test("/assets/brand/logo-secondary-violet.svg"), false, "Brand assets must bypass the maintenance middleware");
+
+  const responses = await Promise.all(
+    ["/", "/about/", "/an-unknown-path", "/maintenance.html", "/MAINTENANCE.HTML"].map(async (route) => {
+      const response = maintenanceMiddleware(new Request(`https://www.kaindly.ai${route}`));
+      assert.equal(response.status, 503, `${route} must return service unavailable`);
+      assert.deepEqual(Object.fromEntries(response.headers), {
+        "cache-control": "no-store, max-age=0",
+        "content-type": "text/html; charset=utf-8",
+        "retry-after": "3600",
+        "x-robots-tag": "noindex, nofollow",
+      });
+      return response.text();
+    }),
+  );
+  assert.equal(new Set(responses).size, 1, "Every application route must receive the same maintenance document");
+
+  const maintenance = responses[0];
+  assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(maintenance, /A Thoughtful Update Is Underway/);
+  assert.match(maintenance, /Our site is being updated\./);
+  assert.match(maintenance, /Thank you for your patience while we make thoughtful improvements to the KAINDLY experience\. We(?:’|&rsquo;)ll be back soon\./);
+  assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
+  assert.match(maintenance, />hello@kaindly\.ai<\/a>/);
+  assert.match(maintenance, /Lead AI\. Don(?:’|&rsquo;)t Chase It\./);
+  assert.equal((maintenance.match(/<a\b/g) || []).length, 1, "Email must be the only anchor");
+  assert.equal((maintenance.match(/mailto:hello@kaindly\.ai/g) || []).length, 1);
+  assert.doesNotMatch(maintenance, /<nav\b|acuityscheduling|data-tf-live|Schedule Appointment|Book a Call/i);
+  assert.doesNotMatch(maintenance, /<(?:button|input|select|textarea|form|iframe)\b/i);
+});
+
 test("Home exposes the shared, accessible launch shell", () => {
   assert.equal(existsSync("index.html"), true, "index.html is missing");
   assert.equal(existsSync("assets/css/site.css"), true, "shared stylesheet is missing");
