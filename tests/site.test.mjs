@@ -1,6 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+
+const pageFiles = [
+  ["index.html", "/"],
+  ["collective/index.html", "/collective/"],
+  ["insights/index.html", "/insights/"],
+  ["about/index.html", "/about/"],
+  ["contact/index.html", "/contact/"],
+];
 
 const launchAssets = [
   ".nojekyll",
@@ -106,6 +115,10 @@ test("About introduces both founders before the company story", () => {
   assert.match(html, /Co-Founder/);
   assert.match(html, /Why KAINDLY/);
   assert.match(html, /Values in Practice/);
+  assert.match(html, /src="\.\.\/assets\/images\/barbara-salami\.jpg" alt="Barbara Salami"/);
+  assert.match(html, /src="\.\.\/assets\/images\/leanna-baker-williams\.jpg" alt="Leanna Baker Williams"/);
+  assert.equal(existsSync("assets/images/barbara-salami.jpg"), true, "Barbara's launch headshot is missing");
+  assert.equal(existsSync("assets/images/leanna-baker-williams.jpg"), true, "Leanna's launch headshot is missing");
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
@@ -125,4 +138,55 @@ test("Contact exposes both Acuity integrations and never depends on a form", () 
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(html, /<form\b/i);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
+
+test("every page has complete unique metadata and accessibility landmarks", () => {
+  const titles = new Set();
+  const descriptions = new Set();
+
+  for (const [file, route] of pageFiles) {
+    const html = readFileSync(file, "utf8");
+    const title = html.match(/<title>([^<]+)<\/title>/)?.[1];
+    const description = html.match(/<meta name="description" content="([^"]+)">/)?.[1];
+
+    assert.ok(title, `${file} needs a title`);
+    assert.ok(description, `${file} needs a description`);
+    assert.equal(titles.has(title), false, `${file} title must be unique`);
+    assert.equal(descriptions.has(description), false, `${file} description must be unique`);
+    titles.add(title);
+    descriptions.add(description);
+
+    assert.match(html, new RegExp(`<link rel="canonical" href="https:\\/\\/www\\.kaindly\\.ai${route.replaceAll("/", "\\/")}">`));
+    assert.match(html, new RegExp(`<meta property="og:url" content="https:\\/\\/www\\.kaindly\\.ai${route.replaceAll("/", "\\/")}">`));
+    assert.match(html, /<meta name="twitter:title" content="[^"]+">/);
+    assert.match(html, /<meta name="twitter:description" content="[^"]+">/);
+    assert.match(html, /<meta name="twitter:image" content="https:\/\/www\.kaindly\.ai\/assets\/brand\/og\.png">/);
+    assert.equal((html.match(/<main\b/g) || []).length, 1, `${file} needs one main landmark`);
+    assert.equal((html.match(/aria-current="page"/g) || []).length, 1, `${file} needs one active navigation item`);
+    assert.match(html, /href="#main-content"[^>]*>Skip to content<\/a>/);
+
+    for (const imageTag of html.matchAll(/<img\b[^>]*>/g)) {
+      assert.match(imageTag[0], /\balt="[^"]*"/, `${file} image is missing alt text`);
+    }
+
+    for (const anchorTag of html.matchAll(/<a\b[^>]*href="https?:\/\/[^>]+>/g)) {
+      if (!/target="_blank"/.test(anchorTag[0])) continue;
+      assert.match(anchorTag[0], /rel="noopener noreferrer"/, `${file} external new-tab link is unsafe`);
+    }
+  }
+});
+
+test("every local page link and asset reference resolves", () => {
+  for (const [file] of pageFiles) {
+    const html = readFileSync(file, "utf8");
+    for (const match of html.matchAll(/\b(?:href|src)="([^"]+)"/g)) {
+      const reference = match[1];
+      if (/^(?:https?:|mailto:|tel:|#)/.test(reference)) continue;
+
+      const cleanReference = reference.split(/[?#]/, 1)[0];
+      let target = resolve(dirname(file), cleanReference);
+      if (cleanReference.endsWith("/")) target = resolve(target, "index.html");
+      assert.equal(existsSync(target), true, `${file} has a broken reference: ${reference}`);
+    }
+  }
 });

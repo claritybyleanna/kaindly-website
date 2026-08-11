@@ -1435,61 +1435,17 @@ strong {
 }
 
 .founder-identity {
-  position: relative;
-  display: grid;
   min-height: 300px;
-  place-items: center;
   overflow: hidden;
-  background: var(--periwinkle-25);
 }
 
-.founder-identity--green {
-  background: var(--honeydew-50);
-}
-
-.founder-identity::before,
-.founder-identity::after {
-  position: absolute;
-  border-radius: 50%;
-  content: "";
-}
-
-.founder-identity::before {
-  width: 260px;
-  height: 260px;
-  top: -130px;
-  left: -90px;
-  border: 62px solid var(--periwinkle-50);
-}
-
-.founder-identity::after {
-  width: 200px;
-  height: 200px;
-  right: -75px;
-  bottom: -98px;
-  border: 48px solid var(--violet);
-}
-
-.founder-identity--green::before {
-  border-color: var(--honeydew);
-}
-
-.founder-identity--green::after {
-  border-color: var(--green);
-}
-
-.founder-initials {
-  position: relative;
-  z-index: 1;
-  color: var(--violet);
-  font-family: var(--font-heading);
-  font-size: clamp(4rem, 9vw, 7rem);
-  font-weight: 700;
-  letter-spacing: -0.07em;
-}
-
-.founder-identity--green .founder-initials {
-  color: var(--green);
+.founder-photo {
+  width: 100%;
+  height: 100%;
+  min-height: 300px;
+  aspect-ratio: 1;
+  object-fit: cover;
+  object-position: center;
 }
 
 .founder-copy {
@@ -1771,6 +1727,7 @@ strong {
   .story-card h3 { min-height: 0; }
   .founder-grid, .values-layout { grid-template-columns: 1fr; }
   .founder-identity { min-height: 250px; }
+  .founder-photo { min-height: 250px; }
   .booking-panel { padding: 32px 24px; }
 }
 
