@@ -6,6 +6,8 @@
 
 **Architecture:** Create one self-contained static `maintenance.html` and one root `vercel.json`. Ordered Vercel routes allow existing brand assets, then rewrite every other application path to the maintenance document with a temporary `503` response and anti-indexing headers; GitHub Pages ignores the Vercel configuration.
 
+> **Implementation correction (2026-08-11):** The route rewrite design above is superseded by root `middleware.js`. Vercel Routing Middleware directly returns the maintenance HTML with `503` semantics and the required headers for every non-asset path (including `/maintenance.html` and case variants), avoiding a destination rewrite loop. Its statically analyzable matcher excludes `/assets/`; GitHub Pages remains unaffected because it does not execute Vercel middleware.
+
 **Tech Stack:** HTML5, inline CSS, Vercel static routing, Node.js built-in test runner, Playwright browser verification
 
 ## Global Constraints

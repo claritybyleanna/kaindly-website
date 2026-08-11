@@ -1,4 +1,4 @@
-<!doctype html>
+const maintenanceDocument = `<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -143,4 +143,20 @@
     </section>
   </main>
 </body>
-</html>
+</html>`;
+
+export const config = {
+  matcher: ["/((?!assets/).*)"],
+};
+
+export default function maintenanceMiddleware() {
+  return new Response(maintenanceDocument, {
+    status: 503,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      "Content-Type": "text/html; charset=utf-8",
+      "Retry-After": "3600",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}

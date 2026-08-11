@@ -30,11 +30,32 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
-test("Vercel serves the approved maintenance wall on every application route", () => {
-  assert.equal(existsSync("maintenance.html"), true, "Maintenance page is missing");
-  assert.equal(existsSync("vercel.json"), true, "Vercel configuration is missing");
+test("Vercel middleware serves the approved maintenance wall on every application route", async () => {
+  assert.equal(existsSync("middleware.js"), true, "Vercel routing middleware is missing");
 
-  const maintenance = readFileSync("maintenance.html", "utf8");
+  const { config, default: maintenanceMiddleware } = await import("../middleware.js");
+  const matcher = new RegExp(`^${config.matcher[0]}$`);
+  for (const route of ["/", "/about/", "/an-unknown-path", "/maintenance.html", "/MAINTENANCE.HTML"]) {
+    assert.equal(matcher.test(route), true, `${route} must invoke the maintenance middleware`);
+  }
+  assert.equal(matcher.test("/assets/brand/logo-secondary-violet.svg"), false, "Brand assets must bypass the maintenance middleware");
+
+  const responses = await Promise.all(
+    ["/", "/about/", "/an-unknown-path", "/maintenance.html", "/MAINTENANCE.HTML"].map(async (route) => {
+      const response = maintenanceMiddleware(new Request(`https://www.kaindly.ai${route}`));
+      assert.equal(response.status, 503, `${route} must return service unavailable`);
+      assert.deepEqual(Object.fromEntries(response.headers), {
+        "cache-control": "no-store, max-age=0",
+        "content-type": "text/html; charset=utf-8",
+        "retry-after": "3600",
+        "x-robots-tag": "noindex, nofollow",
+      });
+      return response.text();
+    }),
+  );
+  assert.equal(new Set(responses).size, 1, "Every application route must receive the same maintenance document");
+
+  const maintenance = responses[0];
   assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);
   assert.match(maintenance, /A Thoughtful Update Is Underway/);
   assert.match(maintenance, /Our site is being updated\./);
@@ -42,28 +63,10 @@ test("Vercel serves the approved maintenance wall on every application route", (
   assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
   assert.match(maintenance, />hello@kaindly\.ai<\/a>/);
   assert.match(maintenance, /Lead AI\. Don(?:’|&rsquo;)t Chase It\./);
+  assert.equal((maintenance.match(/<a\b/g) || []).length, 1, "Email must be the only anchor");
   assert.equal((maintenance.match(/mailto:hello@kaindly\.ai/g) || []).length, 1);
   assert.doesNotMatch(maintenance, /<nav\b|acuityscheduling|data-tf-live|Schedule Appointment|Book a Call/i);
-
-  const config = JSON.parse(readFileSync("vercel.json", "utf8"));
-  assert.equal(config.$schema, "https://openapi.vercel.sh/vercel.json");
-  assert.deepEqual(config.routes[0], {
-    src: "/assets/(.*)",
-    dest: "/assets/$1",
-  });
-  const maintenanceRoute = config.routes[1];
-  const maintenanceRouteMatcher = new RegExp(`^${maintenanceRoute.src}$`);
-  for (const route of ["/", "/about/", "/an-unknown-path"]) {
-    assert.equal(maintenanceRouteMatcher.test(route), true, `${route} must receive the maintenance wall`);
-  }
-  assert.equal(maintenanceRouteMatcher.test("/maintenance.html"), false, "The maintenance document must not rewrite to itself");
-  assert.equal(maintenanceRoute.dest, "/maintenance.html");
-  assert.equal(maintenanceRoute.status, 503);
-  assert.deepEqual(maintenanceRoute.headers, {
-    "Cache-Control": "no-store, max-age=0",
-    "Retry-After": "3600",
-    "X-Robots-Tag": "noindex, nofollow",
-  });
+  assert.doesNotMatch(maintenance, /<(?:button|input|select|textarea|form|iframe)\b/i);
 });
 
 test("Home exposes the shared, accessible launch shell", () => {

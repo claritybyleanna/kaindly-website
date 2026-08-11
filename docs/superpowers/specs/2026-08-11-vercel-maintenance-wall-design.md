@@ -4,6 +4,10 @@
 
 Place a temporary, branded maintenance wall in front of every user-facing Vercel route while preserving the completed website files behind it. GitHub Pages must continue serving the full website unchanged.
 
+## Implementation Correction
+
+The original self-rewriting `vercel.json` route design is superseded by root Vercel Routing Middleware. `middleware.js` directly returns the maintenance HTML with the required `503` and response headers for every non-asset path, including `/maintenance.html` and case variants. This guarantees all-path `503` semantics without a rewrite destination or loop; the statically analyzable matcher excludes `/assets/` so brand files continue to load. GitHub Pages does not execute Vercel middleware.
+
 ## Visitor Experience
 
 Every user-facing Vercel URL returns the same standalone maintenance page without changing the requested URL in the browser. The page contains:
