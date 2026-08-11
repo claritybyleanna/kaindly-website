@@ -17,7 +17,6 @@
   <meta name="twitter:image" content="https://www.kaindly.ai/assets/brand/og.png">
   <link rel="icon" href="../assets/brand/icon-violet.svg" type="image/svg+xml">
   <link rel="stylesheet" href="../assets/css/site.css">
-  <link rel="stylesheet" href="https://embed.acuityscheduling.com/embed/button/38041134.css" id="acuity-button-styles">
   <script type="module" src="../assets/js/site.js"></script>
 </head>
 <body>
@@ -52,17 +51,30 @@
           </ol>
         </div>
 
-        <div class="booking-panel" data-reveal>
+        <div class="scheduler-panel" data-reveal>
           <p class="eyebrow">Schedule With KAINDLY</p>
           <h2>Choose Your Time.</h2>
-          <p>The Acuity scheduler opens securely so you can see current availability and select the appointment that fits.</p>
-          <a href="https://app.acuityscheduling.com/schedule.php?owner=38041134&amp;ref=booking_button" target="_blank" rel="noopener noreferrer" class="acuity-embed-button" style="background: #6b45c4; color: #fff; padding: 12px 18px; border: 0; box-shadow: 0 -2px 0 rgba(0,0,0,0.15) inset; border-radius: 4px; text-decoration: none; display: inline-block;">Schedule Appointment</a>
-          <p class="booking-note">Scheduling and appointment details are managed securely through Acuity Scheduling.</p>
-          <div class="booking-fallback">
-            <p>If the scheduling window does not open, use the direct booking page.</p>
-            <a class="text-link" href="https://app.acuityscheduling.com/schedule.php?owner=38041134&amp;ref=booking_button" target="_blank" rel="noopener noreferrer">Open the Direct Scheduler</a>
-          </div>
+          <p>See current availability and select the appointment that fits.</p>
+          <iframe src="https://app.acuityscheduling.com/schedule.php?owner=38041134&amp;ref=embedded_csp" title="Schedule Appointment" width="100%" height="800" frameborder="0" allow="payment"></iframe>
+          <p class="embed-fallback">If scheduling does not load, <a href="https://app.acuityscheduling.com/schedule.php?owner=38041134&amp;ref=booking_button" target="_blank" rel="noopener noreferrer">open the direct scheduler</a>.</p>
         </div>
+      </div>
+    </section>
+
+    <section class="section section--soft">
+      <div class="container contact-pathways">
+        <article class="message-panel" data-reveal>
+          <h2>Send Us a Message</h2>
+          <p>Tell us where you are and what you're working toward. We reply within two business days.</p>
+          <div data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"></div>
+          <p class="embed-fallback">If the form does not load, <a href="https://form.typeform.com/to/01KZS1XDVQMV2J1AP4SMMSTQZ6" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p>
+        </article>
+        <aside class="assessment-card" data-reveal>
+          <p class="eyebrow">Find Your Starting Point</p>
+          <h2>Not Sure Where You Stand?</h2>
+          <p>Take the 10-minute AI Readiness Assessment and get a recommended starting point.</p>
+          <a class="text-link" href="../assessment/">Take the Assessment <span aria-hidden="true">→</span></a>
+        </aside>
       </div>
     </section>
 
@@ -76,7 +88,8 @@
 
   <div class="acuity-booking-bar" style="display: none;">KAiNDLY<a href="https://app.acuityscheduling.com/schedule.php?owner=38041134&amp;ref=booking_bar" target="_blank" rel="noopener noreferrer" class="acuity-embed-button">Schedule Appointment</a></div>
   <script src="https://embed.acuityscheduling.com/embed/bar/38041134.js" async></script>
-  <script src="https://embed.acuityscheduling.com/embed/button/38041134.js" async></script>
+  <script src="https://embed.acuityscheduling.com/js/embed.js" type="text/javascript" async></script>
+  <script src="https://embed.typeform.com/next/embed.js" async></script>
 
   <footer class="site-footer">
     <div class="container footer-grid">

@@ -1772,9 +1772,81 @@ strong {
 
 .contact-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.8fr) minmax(380px, 1.2fr);
+  grid-template-columns: minmax(260px, 0.65fr) minmax(500px, 1.35fr);
   align-items: start;
   gap: 62px;
+}
+
+.scheduler-panel {
+  overflow: hidden;
+  padding: 32px;
+  border: 1px solid var(--periwinkle-50);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow-md);
+}
+
+.scheduler-panel h2 {
+  margin-bottom: 14px;
+  font-size: clamp(2.2rem, 4vw, 3.7rem);
+}
+
+.scheduler-panel > p:not(.eyebrow, .embed-fallback) {
+  margin-bottom: 24px;
+  color: var(--muted);
+}
+
+.scheduler-panel iframe {
+  display: block;
+  min-width: 100%;
+  border: 0;
+  border-radius: var(--radius);
+  background: var(--white);
+}
+
+.contact-pathways {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(280px, 0.75fr);
+  align-items: start;
+  gap: 32px;
+}
+
+.message-panel,
+.assessment-card {
+  padding: 40px;
+  border: 1px solid var(--grey);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.message-panel h2,
+.assessment-card h2 {
+  margin-bottom: 12px;
+  color: var(--violet);
+  font-size: clamp(2rem, 4vw, 3.6rem);
+}
+
+.message-panel > p:not(.embed-fallback),
+.assessment-card > p:not(.eyebrow) {
+  color: var(--muted);
+}
+
+.message-panel [data-tf-live] {
+  min-height: 680px;
+  margin-top: 24px;
+}
+
+.assessment-card {
+  position: sticky;
+  top: 134px;
+}
+
+.assessment-card .text-link {
+  display: inline-flex;
+  margin-top: 10px;
+  gap: 8px;
+  font-size: 1rem;
 }
 
 .expectation-list {
@@ -1909,8 +1981,9 @@ strong {
   .insights-layout { grid-template-columns: 1fr; }
   .filter-panel { position: static; }
   .filter-list { grid-template-columns: repeat(3, 1fr); }
-  .about-hero-grid, .contact-layout { grid-template-columns: 1fr; }
+  .about-hero-grid, .contact-layout, .contact-pathways { grid-template-columns: 1fr; }
   .about-brand-panel { min-height: 320px; }
+  .assessment-card { position: static; }
 }
 
 @media (max-width: 640px) {
@@ -1951,6 +2024,7 @@ strong {
   .founder-identity { min-height: 250px; }
   .founder-photo { min-height: 250px; }
   .booking-panel { padding: 32px 24px; }
+  .scheduler-panel, .message-panel, .assessment-card { padding: 30px 22px; }
   .typeform-panel { padding: 10px; }
   .typeform-panel [data-tf-live] { min-height: 620px; }
   .assessment-banner { grid-template-columns: 1fr; padding: 34px 26px; }

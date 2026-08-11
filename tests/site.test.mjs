@@ -145,7 +145,7 @@ test("About introduces both founders before the company story", () => {
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
-test("Contact exposes both Acuity integrations and never depends on a form", () => {
+test("Contact exposes embedded scheduling, messaging, and assessment paths", () => {
   assert.equal(existsSync("contact/index.html"), true, "Contact page is missing");
   const html = readFileSync("contact/index.html", "utf8");
 
@@ -155,9 +155,15 @@ test("Contact exposes both Acuity integrations and never depends on a form", () 
   assert.match(html, /class="acuity-booking-bar" style="display: none;"/);
   assert.match(html, /owner=38041134&amp;ref=booking_bar/);
   assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/bar\/38041134\.js/);
+  assert.match(html, /src="https:\/\/app\.acuityscheduling\.com\/schedule\.php\?owner=38041134&amp;ref=embedded_csp"/);
+  assert.match(html, /title="Schedule Appointment"[^>]+width="100%"[^>]+height="800"[^>]+allow="payment"/);
+  assert.equal((html.match(/https:\/\/embed\.acuityscheduling\.com\/js\/embed\.js/g) || []).length, 1);
   assert.match(html, /owner=38041134&amp;ref=booking_button/);
-  assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/button\/38041134\.css/);
-  assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/button\/38041134\.js/);
+  assert.match(html, /data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"/);
+  assert.match(html, /https:\/\/form\.typeform\.com\/to\/01KZS1XDVQMV2J1AP4SMMSTQZ6/);
+  assert.equal((html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
+  assert.match(html, /Not Sure Where You Stand\?/);
+  assert.match(html, /href="\.\.\/assessment\/"/);
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(html, /<form\b/i);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
