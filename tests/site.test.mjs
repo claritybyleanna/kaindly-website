@@ -47,3 +47,22 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.match(html, /src="assets\/js\/site\.js"/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
+
+test("Collective presents the approved membership journey without unsupported offer claims", () => {
+  assert.equal(existsSync("collective/index.html"), true, "Collective page is missing");
+  const html = readFileSync("collective/index.html", "utf8");
+  const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  assert.match(html, /<title>KAINDLY \| The Kaindly Collective<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/collective\/">/);
+  assert.match(html, /href="\.\.\/collective\/"[^>]+aria-current="page"/);
+  assert.match(visibleText, /Your AI Future Starts With You/);
+  assert.match(visibleText, /Not a Course\. A Living Ecosystem\./);
+  assert.match(html, /id="experience"/);
+  assert.match(html, /id="transformation"/);
+  assert.match(html, /id="pathways"/);
+  assert.equal((html.match(/data-pathway/g) || []).length, 5);
+  assert.match(html, /owner=38041134&amp;ref=booking_button/);
+  assert.doesNotMatch(html, /\$\d|Enrollment Closes|April\s+1/i);
+  assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
