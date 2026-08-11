@@ -30,6 +30,39 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
+test("Vercel serves the approved maintenance wall on every application route", () => {
+  assert.equal(existsSync("maintenance.html"), true, "Maintenance page is missing");
+  assert.equal(existsSync("vercel.json"), true, "Vercel configuration is missing");
+
+  const maintenance = readFileSync("maintenance.html", "utf8");
+  assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(maintenance, /A Thoughtful Update Is Underway/);
+  assert.match(maintenance, /Our site is being updated\./);
+  assert.match(maintenance, /Thank you for your patience while we make thoughtful improvements to the KAINDLY experience\. We(?:’|&rsquo;)ll be back soon\./);
+  assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
+  assert.match(maintenance, />hello@kaindly\.ai<\/a>/);
+  assert.match(maintenance, /Lead AI\. Don(?:’|&rsquo;)t Chase It\./);
+  assert.equal((maintenance.match(/mailto:hello@kaindly\.ai/g) || []).length, 1);
+  assert.doesNotMatch(maintenance, /<nav\b|acuityscheduling|data-tf-live|Schedule Appointment|Book a Call/i);
+
+  const config = JSON.parse(readFileSync("vercel.json", "utf8"));
+  assert.equal(config.$schema, "https://openapi.vercel.sh/vercel.json");
+  assert.deepEqual(config.routes[0], {
+    src: "/assets/(.*)",
+    dest: "/assets/$1",
+  });
+  assert.deepEqual(config.routes[1], {
+    src: "/(.*)",
+    dest: "/maintenance.html",
+    status: 503,
+    headers: {
+      "Cache-Control": "no-store, max-age=0",
+      "Retry-After": "3600",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+});
+
 test("Home exposes the shared, accessible launch shell", () => {
   assert.equal(existsSync("index.html"), true, "index.html is missing");
   assert.equal(existsSync("assets/css/site.css"), true, "shared stylesheet is missing");
