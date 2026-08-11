@@ -2,6 +2,7 @@
   "name": "kaindly-website",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "The official Kaindly website.",
   "scripts": {
     "test": "node --test tests/site.test.mjs"

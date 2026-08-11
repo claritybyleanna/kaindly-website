@@ -66,3 +66,29 @@ test("Collective presents the approved membership journey without unsupported of
   assert.doesNotMatch(html, /\$\d|Enrollment Closes|April\s+1/i);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
+
+test("Insights filtering matches complete category tokens", async () => {
+  const { insightMatches } = await import("../assets/js/site.js");
+  assert.equal(insightMatches("kaindly growth", "all"), true);
+  assert.equal(insightMatches("kaindly growth", "kaindly"), true);
+  assert.equal(insightMatches("kaindly growth", "growth"), true);
+  assert.equal(insightMatches("kaindly growth", "ai"), false);
+  assert.equal(insightMatches("ai-news", "ai"), false);
+});
+
+test("Insights presents curated previews without broken article destinations", () => {
+  assert.equal(existsSync("insights/index.html"), true, "Insights page is missing");
+  const html = readFileSync("insights/index.html", "utf8");
+
+  assert.match(html, /<title>KAINDLY \| Insights<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/insights\/">/);
+  assert.match(html, /href="\.\.\/insights\/"[^>]+aria-current="page"/);
+  assert.equal((html.match(/data-filter="/g) || []).length, 6);
+  assert.equal((html.match(/data-insight-card/g) || []).length, 3);
+  assert.match(html, /data-filter="all"[^>]+aria-pressed="true"/);
+  assert.match(html, /Exclusion and Inequity Has a New Face in the World of AI/);
+  assert.match(html, /Your Company Won't Save You from the AI Revolution/);
+  assert.match(html, /KAINDLY Standards/);
+  assert.equal((html.match(/href="\.\.\/insights\/"/g) || []).length, 2);
+  assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
