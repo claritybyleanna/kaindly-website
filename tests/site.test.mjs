@@ -107,6 +107,16 @@ test("Home exposes the approved assessment and five-card structure", () => {
   }
 });
 
+test("Home stylesheet defines the approved responsive grids", () => {
+  const css = readFileSync("assets/css/site.css", "utf8");
+  assert.match(css, /\.home-assessment-layout\s*{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)\s+auto;/);
+  assert.match(css, /\.system-grid\s*{[\s\S]*?grid-template-columns:\s*repeat\(5,\s*minmax\(0,\s*1fr\)\);/);
+  assert.match(css, /@media \(max-width:\s*1179px\)[\s\S]*?\.system-grid\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/);
+  assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.stage-rail\s*{[^}]*grid-template-columns:\s*1fr;/);
+  assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.system-grid\s*{[^}]*grid-template-columns:\s*1fr;/);
+  assert.match(css, /@media \(max-width:\s*680px\)[\s\S]*?\.home-assessment-layout\s*{[^}]*grid-template-columns:\s*1fr;/);
+});
+
 test("every page initializes the newsletter popover exactly once", () => {
   for (const [file] of pageFiles) {
     const html = readFileSync(file, "utf8");
