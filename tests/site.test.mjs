@@ -9,6 +9,7 @@ const pageFiles = [
   ["insights/index.html", "/insights/"],
   ["about/index.html", "/about/"],
   ["contact/index.html", "/contact/"],
+  ["assessment/index.html", "/assessment/"],
 ];
 
 const launchAssets = [
@@ -57,10 +58,24 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
-test("Collective presents the approved membership journey without unsupported offer claims", () => {
+test("Home and Assessment expose the supplied Typeforms with fallbacks", () => {
+  assert.equal(existsSync("assessment/index.html"), true, "Assessment page is missing");
+  const home = readFileSync("index.html", "utf8");
+  const assessment = readFileSync("assessment/index.html", "utf8");
+
+  assert.match(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
+  assert.match(home, /https:\/\/form\.typeform\.com\/to\/01KJ3V41DCC0V9P0VT0T97XK4E/);
+  assert.equal((home.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
+  assert.match(assessment, /data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"/);
+  assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/01KJ3TB8AV4EBVV6P51RE768EB/);
+  assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
+});
+
+test("Collective preserves the complete approved membership offer", () => {
   assert.equal(existsSync("collective/index.html"), true, "Collective page is missing");
   const html = readFileSync("collective/index.html", "utf8");
   const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+  const circleUrl = "https://kaindly.circle.so/checkout/founding-member";
 
   assert.match(html, /<title>KAINDLY \| The Kaindly Collective<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/collective\/">/);
@@ -70,9 +85,17 @@ test("Collective presents the approved membership journey without unsupported of
   assert.match(html, /id="experience"/);
   assert.match(html, /id="transformation"/);
   assert.match(html, /id="pathways"/);
+  assert.match(visibleText, /Enrollment Now Open/);
+  assert.match(visibleText, /\$97\/month/);
+  assert.match(visibleText, /Cancel anytime/);
+  assert.equal((html.match(/data-audience-card/g) || []).length, 6);
+  assert.equal((html.match(/data-benefit/g) || []).length, 5);
   assert.equal((html.match(/data-pathway/g) || []).length, 5);
-  assert.match(html, /owner=38041134&amp;ref=booking_button/);
-  assert.doesNotMatch(html, /\$\d|Enrollment Closes|April\s+1/i);
+  for (const price of ["$2,000+", "$500+", "$300+", "$97/month"]) {
+    assert.match(visibleText, new RegExp(price.replace(/[+$]/g, "\\$&")));
+  }
+  assert.ok((html.match(new RegExp(circleUrl, "g")) || []).length >= 2);
+  assert.match(html, /href="\.\.\/assessment\/"/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
@@ -162,7 +185,8 @@ test("every page has complete unique metadata and accessibility landmarks", () =
     assert.match(html, /<meta name="twitter:description" content="[^"]+">/);
     assert.match(html, /<meta name="twitter:image" content="https:\/\/www\.kaindly\.ai\/assets\/brand\/og\.png">/);
     assert.equal((html.match(/<main\b/g) || []).length, 1, `${file} needs one main landmark`);
-    assert.equal((html.match(/aria-current="page"/g) || []).length, 1, `${file} needs one active navigation item`);
+    const expectedCurrentLinks = file === "assessment/index.html" ? 0 : 1;
+    assert.equal((html.match(/aria-current="page"/g) || []).length, expectedCurrentLinks, `${file} has an incorrect active navigation state`);
     assert.match(html, /href="#main-content"[^>]*>Skip to content<\/a>/);
 
     for (const imageTag of html.matchAll(/<img\b[^>]*>/g)) {

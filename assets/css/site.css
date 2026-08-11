@@ -907,6 +907,47 @@ strong {
   color: #cfccd6;
 }
 
+.enrollment-pill {
+  display: inline-flex;
+  padding: 8px 13px;
+  margin-bottom: 26px;
+  border: 1px solid var(--honeydew);
+  border-radius: 999px;
+  background: var(--honeydew);
+  color: var(--charcoal);
+  font-family: var(--font-accent);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.collective-intro {
+  margin-bottom: 14px;
+  color: #b8b6be;
+  font-size: 1.1rem;
+}
+
+.membership-price {
+  margin: 16px 0 12px;
+  color: #b8b6be;
+  font-size: 0.88rem;
+}
+
+.membership-price strong {
+  color: var(--white);
+}
+
+.collective-assessment-link {
+  color: var(--honeydew);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.collective-assessment-link:hover {
+  color: var(--white);
+}
+
 .hero-emblem {
   display: grid;
   min-height: 360px;
@@ -985,6 +1026,13 @@ strong {
   margin-bottom: 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.collective-affirmation {
+  max-width: 760px;
+  margin: 38px auto 0;
+  color: var(--violet);
+  text-align: center;
 }
 
 .comparison-grid {
@@ -1116,6 +1164,176 @@ strong {
   border-radius: var(--radius);
   background: var(--periwinkle-25);
   color: var(--charcoal) !important;
+}
+
+.value-comparison {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.price-card {
+  display: flex;
+  min-height: 300px;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 28px;
+  border: 1px solid var(--grey);
+  border-radius: var(--radius);
+  background: var(--white);
+}
+
+.price-card > span {
+  min-height: 48px;
+  color: var(--muted);
+  font-family: var(--font-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.price-card strong {
+  color: var(--charcoal);
+  font-family: var(--font-heading);
+  font-size: clamp(2rem, 3.2vw, 3rem);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.price-card small {
+  margin: 8px 0 22px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.price-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.price-card--featured {
+  border-color: var(--violet);
+  background: var(--violet);
+  box-shadow: var(--shadow-md);
+}
+
+.price-card--featured > span,
+.price-card--featured small,
+.price-card--featured p {
+  color: var(--periwinkle-50);
+}
+
+.price-card--featured strong {
+  color: var(--white);
+}
+
+.price-card--featured .button {
+  margin-top: auto;
+  background: var(--white);
+  color: var(--violet);
+}
+
+.assessment-banner {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 34px;
+  padding: 40px 46px;
+  border-radius: var(--radius);
+  background: linear-gradient(105deg, var(--violet) 20%, var(--periwinkle) 100%);
+  color: var(--white);
+}
+
+.assessment-banner .eyebrow,
+.assessment-banner h2,
+.assessment-banner p {
+  color: var(--white);
+}
+
+.assessment-banner h2 {
+  margin-bottom: 8px;
+  font-size: clamp(2rem, 4vw, 3.5rem);
+}
+
+.assessment-banner p {
+  max-width: 680px;
+  margin-bottom: 0;
+}
+
+.assessment-banner .button {
+  background: var(--white);
+  color: var(--violet);
+  white-space: nowrap;
+}
+
+.typeform-layout {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.75fr) minmax(0, 1.25fr);
+  align-items: start;
+  gap: 54px;
+}
+
+.typeform-layout .section-heading {
+  margin-bottom: 0;
+}
+
+.typeform-panel {
+  overflow: hidden;
+  padding: 18px;
+  border: 1px solid var(--periwinkle-50);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.typeform-panel [data-tf-live] {
+  min-height: 540px;
+}
+
+.typeform-panel--assessment {
+  max-width: 980px;
+  margin-inline: auto;
+}
+
+.typeform-panel--assessment [data-tf-live] {
+  min-height: 680px;
+}
+
+.embed-fallback {
+  padding: 14px 12px 0;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.embed-fallback a {
+  color: var(--violet);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.assessment-hero {
+  padding: 96px 0 76px;
+  background: linear-gradient(135deg, var(--periwinkle-25), var(--white) 58%, var(--honeydew-50));
+}
+
+.assessment-hero .section-heading {
+  margin-bottom: 0;
+}
+
+.assessment-hero h1 {
+  max-width: 850px;
+  margin-inline: auto;
+  font-size: clamp(3.3rem, 7vw, 6.2rem);
+}
+
+.assessment-hero p:last-child {
+  max-width: 680px;
+  margin-inline: auto;
 }
 
 .insights-hero {
@@ -1634,6 +1852,7 @@ strong {
   .system-card:last-child { grid-column: 2 / span 4; }
   .feature-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   .feature-card:nth-child(4), .feature-card:nth-child(5) { grid-column: span 1; }
+  .value-comparison { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pathway-row { grid-template-columns: 60px 180px 1fr; }
   .practice-note { grid-column: 2 / -1; }
   .insights-layout { grid-template-columns: 190px 1fr; gap: 28px; }
@@ -1681,6 +1900,9 @@ strong {
   .hero-emblem { min-height: 270px; }
   .card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .feature-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .typeform-layout { grid-template-columns: 1fr; }
+  .assessment-banner { grid-template-columns: auto 1fr; }
+  .assessment-banner .button { grid-column: 2; justify-self: start; }
   .insights-intro { grid-template-columns: 1fr; gap: 36px; }
   .insights-hero { background: var(--periwinkle-25); }
   .featured-story { grid-template-columns: 1fr; }
@@ -1717,7 +1939,7 @@ strong {
   .footer-grid { grid-template-columns: 1fr; gap: 38px; }
   .footer-brand { grid-column: auto; }
   .page-hero h1 { font-size: clamp(3.1rem, 15vw, 5rem); }
-  .comparison-grid, .card-grid, .feature-grid { grid-template-columns: 1fr; }
+  .comparison-grid, .card-grid, .feature-grid, .value-comparison { grid-template-columns: 1fr; }
   .feature-card { min-height: 0; }
   .feature-card::before { margin-bottom: 34px; }
   .pathway-row { grid-template-columns: 44px 1fr; gap: 18px; }
@@ -1729,6 +1951,10 @@ strong {
   .founder-identity { min-height: 250px; }
   .founder-photo { min-height: 250px; }
   .booking-panel { padding: 32px 24px; }
+  .typeform-panel { padding: 10px; }
+  .typeform-panel [data-tf-live] { min-height: 620px; }
+  .assessment-banner { grid-template-columns: 1fr; padding: 34px 26px; }
+  .assessment-banner .button { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
