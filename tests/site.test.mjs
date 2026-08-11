@@ -73,6 +73,40 @@ test("Home links to the Assessment while the Assessment embeds its Typeform", ()
   assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
 });
 
+test("Home exposes the approved assessment and five-card structure", () => {
+  const home = readFileSync("index.html", "utf8");
+  assert.match(home, /class="container home-assessment-layout"/);
+  assert.doesNotMatch(home, /class="container typeform-layout"/);
+
+  const cards = home.match(/<article class="system-card"[\s\S]*?<\/article>/g) || [];
+  assert.equal(cards.length, 5);
+
+  const categories = [
+    "Assessment · Diagnostic",
+    "Discovery · Workflow Mapping",
+    "Enterprise · Bespoke Programs",
+    "Training · Cohort-Based",
+    "Community · Sustained Fluency",
+  ];
+  const badges = [
+    "Enterprise",
+    "Individual",
+    "Enterprise Only",
+    "Enterprise Cohorts",
+    "Open Enrollment",
+    "Organizational Access",
+    "Individual Membership",
+  ];
+
+  for (const category of categories) assert.match(home, new RegExp(category.replace("·", "\\s*·\\s*")));
+  for (const badge of badges) assert.match(home, new RegExp(`>${badge}<`));
+  for (const card of cards) {
+    assert.match(card, /class="card-category"/);
+    assert.match(card, /class="card-description"/);
+    assert.match(card, /class="card-tags"/);
+  }
+});
+
 test("every page initializes the newsletter popover exactly once", () => {
   for (const [file] of pageFiles) {
     const html = readFileSync(file, "utf8");
