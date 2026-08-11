@@ -1356,6 +1356,318 @@ strong {
   font-size: 0.83rem;
 }
 
+.about-hero {
+  padding: 96px 0 70px;
+  background: var(--white);
+}
+
+.about-hero-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  align-items: center;
+  gap: 72px;
+}
+
+.about-hero h1 {
+  max-width: 780px;
+  margin-bottom: 26px;
+  font-size: clamp(3.5rem, 7vw, 6.6rem);
+}
+
+.about-hero .lede {
+  max-width: 650px;
+  color: var(--muted);
+  font-size: 1.14rem;
+}
+
+.about-brand-panel {
+  position: relative;
+  min-height: 440px;
+  overflow: hidden;
+  border-radius: var(--radius);
+  background: var(--violet) url("../brand/gradient.png") center / cover no-repeat;
+}
+
+.about-brand-panel::before,
+.about-brand-panel::after {
+  position: absolute;
+  border-radius: 50%;
+  content: "";
+}
+
+.about-brand-panel::before {
+  width: 360px;
+  height: 360px;
+  top: -190px;
+  left: -130px;
+  border: 84px solid var(--honeydew);
+}
+
+.about-brand-panel::after {
+  width: 310px;
+  height: 310px;
+  right: -120px;
+  bottom: -160px;
+  border: 72px solid var(--periwinkle);
+}
+
+.about-brand-panel img {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  left: 50%;
+  width: min(190px, 48%);
+  transform: translate(-50%, -50%);
+}
+
+.founder-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.founder-card {
+  overflow: hidden;
+  border: 1px solid var(--grey);
+  border-radius: var(--radius);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+}
+
+.founder-identity {
+  position: relative;
+  display: grid;
+  min-height: 300px;
+  place-items: center;
+  overflow: hidden;
+  background: var(--periwinkle-25);
+}
+
+.founder-identity--green {
+  background: var(--honeydew-50);
+}
+
+.founder-identity::before,
+.founder-identity::after {
+  position: absolute;
+  border-radius: 50%;
+  content: "";
+}
+
+.founder-identity::before {
+  width: 260px;
+  height: 260px;
+  top: -130px;
+  left: -90px;
+  border: 62px solid var(--periwinkle-50);
+}
+
+.founder-identity::after {
+  width: 200px;
+  height: 200px;
+  right: -75px;
+  bottom: -98px;
+  border: 48px solid var(--violet);
+}
+
+.founder-identity--green::before {
+  border-color: var(--honeydew);
+}
+
+.founder-identity--green::after {
+  border-color: var(--green);
+}
+
+.founder-initials {
+  position: relative;
+  z-index: 1;
+  color: var(--violet);
+  font-family: var(--font-heading);
+  font-size: clamp(4rem, 9vw, 7rem);
+  font-weight: 700;
+  letter-spacing: -0.07em;
+}
+
+.founder-identity--green .founder-initials {
+  color: var(--green);
+}
+
+.founder-copy {
+  padding: 34px;
+}
+
+.founder-copy h2 {
+  margin-bottom: 8px;
+  font-size: clamp(2rem, 4vw, 3.2rem);
+}
+
+.founder-role {
+  display: block;
+  margin-bottom: 22px;
+  color: var(--violet);
+  font-family: var(--font-accent);
+  font-size: 0.7rem;
+  font-style: italic;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.founder-copy p {
+  color: var(--muted);
+  font-size: 0.91rem;
+}
+
+.founder-copy p:last-child {
+  margin-bottom: 0;
+}
+
+.values-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  align-items: start;
+  gap: 54px;
+}
+
+.values-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.value-card {
+  min-height: 300px;
+  padding: 28px;
+  border: 1px solid var(--periwinkle-50);
+  border-radius: var(--radius);
+  background: var(--periwinkle-25);
+}
+
+.value-card span {
+  display: block;
+  margin-bottom: 50px;
+  color: var(--periwinkle);
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.value-card h3 {
+  margin-bottom: 14px;
+  font-size: 1.15rem;
+}
+
+.value-card p {
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.83rem;
+}
+
+.contact-hero {
+  position: relative;
+  overflow: hidden;
+  padding: 94px 0;
+  background: var(--violet) url("../brand/gradient.png") center / cover no-repeat;
+  color: var(--white);
+}
+
+.contact-hero::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(99, 76, 200, 0.95), rgba(99, 76, 200, 0.64));
+  content: "";
+}
+
+.contact-hero .container {
+  position: relative;
+  z-index: 1;
+}
+
+.contact-hero h1 {
+  max-width: 780px;
+  margin-bottom: 24px;
+  color: var(--white);
+  font-size: clamp(3.4rem, 7vw, 6.5rem);
+}
+
+.contact-hero p {
+  max-width: 610px;
+  margin-bottom: 0;
+  color: #f4f1fb;
+  font-size: 1.16rem;
+}
+
+.contact-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(380px, 1.2fr);
+  align-items: start;
+  gap: 62px;
+}
+
+.expectation-list {
+  display: grid;
+  gap: 14px;
+  padding: 0;
+  margin: 34px 0 0;
+  list-style: none;
+}
+
+.expectation-list li {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  align-items: start;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--grey);
+  border-radius: var(--radius);
+}
+
+.expectation-list strong {
+  color: var(--violet);
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+}
+
+.expectation-list span {
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.booking-panel {
+  position: relative;
+  padding: 42px;
+  border: 1px solid var(--periwinkle-50);
+  border-radius: var(--radius);
+  background: var(--periwinkle-25);
+  box-shadow: var(--shadow-md);
+}
+
+.booking-panel h2 {
+  margin-bottom: 18px;
+  font-size: clamp(2.2rem, 4vw, 3.7rem);
+}
+
+.booking-panel > p {
+  margin-bottom: 28px;
+  color: var(--muted);
+}
+
+.booking-note {
+  margin: 18px 0 0 !important;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.booking-fallback {
+  margin-top: 24px;
+  padding-top: 22px;
+  border-top: 1px solid var(--periwinkle-50);
+}
+
+.booking-fallback p {
+  margin-bottom: 14px;
+  font-size: 0.84rem;
+}
+
 @media (max-width: 1040px) {
   .nav-list { gap: 18px; }
   .nav-list a:not(.button) { font-size: 0.7rem; }
@@ -1370,6 +1682,10 @@ strong {
   .practice-note { grid-column: 2 / -1; }
   .insights-layout { grid-template-columns: 190px 1fr; gap: 28px; }
   .insights-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .values-layout { grid-template-columns: 220px 1fr; gap: 32px; }
+  .values-grid { grid-template-columns: 1fr; }
+  .value-card { min-height: 0; }
+  .value-card span { margin-bottom: 28px; }
 }
 
 @media (max-width: 860px) {
@@ -1415,6 +1731,8 @@ strong {
   .insights-layout { grid-template-columns: 1fr; }
   .filter-panel { position: static; }
   .filter-list { grid-template-columns: repeat(3, 1fr); }
+  .about-hero-grid, .contact-layout { grid-template-columns: 1fr; }
+  .about-brand-panel { min-height: 320px; }
 }
 
 @media (max-width: 640px) {
@@ -1451,6 +1769,9 @@ strong {
   .practice-note { grid-column: 2; }
   .filter-list, .insights-grid { grid-template-columns: 1fr; }
   .story-card h3 { min-height: 0; }
+  .founder-grid, .values-layout { grid-template-columns: 1fr; }
+  .founder-identity { min-height: 250px; }
+  .booking-panel { padding: 32px 24px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

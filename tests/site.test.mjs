@@ -92,3 +92,37 @@ test("Insights presents curated previews without broken article destinations", (
   assert.equal((html.match(/href="\.\.\/insights\/"/g) || []).length, 2);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
+
+test("About introduces both founders before the company story", () => {
+  assert.equal(existsSync("about/index.html"), true, "About page is missing");
+  const html = readFileSync("about/index.html", "utf8");
+
+  assert.match(html, /<title>KAINDLY \| About<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/about\/">/);
+  assert.match(html, /href="\.\.\/about\/"[^>]+aria-current="page"/);
+  assert.equal((html.match(/data-founder/g) || []).length, 2);
+  assert.match(html, /Barbara Salami/);
+  assert.match(html, /Leanna Baker Williams/);
+  assert.match(html, /Co-Founder/);
+  assert.match(html, /Why KAINDLY/);
+  assert.match(html, /Values in Practice/);
+  assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
+
+test("Contact exposes both Acuity integrations and never depends on a form", () => {
+  assert.equal(existsSync("contact/index.html"), true, "Contact page is missing");
+  const html = readFileSync("contact/index.html", "utf8");
+
+  assert.match(html, /<title>KAINDLY \| Schedule a Conversation<\/title>/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/contact\/">/);
+  assert.match(html, /href="\.\.\/contact\/"[^>]+aria-current="page"/);
+  assert.match(html, /class="acuity-booking-bar" style="display: none;"/);
+  assert.match(html, /owner=38041134&amp;ref=booking_bar/);
+  assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/bar\/38041134\.js/);
+  assert.match(html, /owner=38041134&amp;ref=booking_button/);
+  assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/button\/38041134\.css/);
+  assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/button\/38041134\.js/);
+  assert.match(html, /target="_blank" rel="noopener noreferrer"/);
+  assert.doesNotMatch(html, /<form\b/i);
+  assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
