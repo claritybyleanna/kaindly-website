@@ -1280,6 +1280,11 @@ strong {
   margin-bottom: 0;
 }
 
+.home-assessment-action {
+  align-self: center;
+  justify-self: center;
+}
+
 .typeform-panel {
   overflow: hidden;
   padding: 18px;

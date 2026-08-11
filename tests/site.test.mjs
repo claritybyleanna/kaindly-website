@@ -59,17 +59,34 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
-test("Home and Assessment expose the supplied Typeforms with fallbacks", () => {
+test("Home links to the Assessment while the Assessment embeds its Typeform", () => {
   assert.equal(existsSync("assessment/index.html"), true, "Assessment page is missing");
   const home = readFileSync("index.html", "utf8");
   const assessment = readFileSync("assessment/index.html", "utf8");
 
-  assert.match(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
-  assert.match(home, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
+  assert.doesNotMatch(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
+  assert.doesNotMatch(home, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
+  assert.match(home, /<a class="button button--accent" href="assessment\/">Take the Assessment<\/a>/);
   assert.equal((home.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(assessment, /data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"/);
   assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
+});
+
+test("every page initializes the newsletter popover exactly once", () => {
+  for (const [file] of pageFiles) {
+    const html = readFileSync(file, "utf8");
+    assert.equal(
+      (html.match(/data-tf-live="01KZS2YNAZC5SMZR13X20CRVKZ"/g) || []).length,
+      1,
+      `${file} needs one newsletter popover`,
+    );
+    assert.equal(
+      (html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length,
+      1,
+      `${file} needs exactly one Typeform loader`,
+    );
+  }
 });
 
 test("Collective preserves the complete approved membership offer", () => {

@@ -4,7 +4,7 @@
 
 **Goal:** Initialize the supplied KAINDLY newsletter Typeform popover exactly once on every published page.
 
-**Architecture:** Add the same `data-tf-live` container near the end of each static HTML body. Reuse existing Typeform loaders on pages that already have forms and add one loader only where missing, preserving the current framework-free GitHub Pages architecture.
+**Architecture:** Add the same `data-tf-live` container near the end of each static HTML body. Reuse existing Typeform loaders on pages that already have forms and add one loader only where missing, preserving the current framework-free GitHub Pages architecture. Replace the unreliable Home readiness embed with a direct button to the dedicated Assessment page.
 
 **Tech Stack:** HTML5, Typeform live embeds, Node.js built-in test runner, Playwright browser verification, GitHub Pages
 
@@ -12,14 +12,15 @@
 
 - Use live embed ID `01KZS2YNAZC5SMZR13X20CRVKZ` on all seven routes.
 - Load `https://embed.typeform.com/next/embed.js` exactly once per page.
-- Do not alter the existing Home readiness Typeform, Assessment Typeform, Contact message Typeform, Acuity scheduler, or fallback links.
+- Replace the Home readiness Typeform with a branded button to `/assessment/`.
+- Do not alter the Assessment Typeform, Contact message Typeform, Acuity scheduler, or their fallback links.
 - Do not add CSS, JavaScript, dependencies, or a build step for the popover.
 
 ---
 
 ## File Structure
 
-- `index.html` — Home popover container; retains the existing Typeform loader.
+- `index.html` — Home assessment button, popover container, and Typeform loader.
 - `collective/index.html` — Collective popover container and Typeform loader.
 - `assessment/index.html` — Assessment popover container; retains the existing Typeform loader.
 - `insights/index.html` — Insights popover container and Typeform loader.
@@ -82,7 +83,7 @@ Insert the following immediately after `</main>` on each page:
 <div data-tf-live="01KZS2YNAZC5SMZR13X20CRVKZ"></div>
 ```
 
-On Home, Assessment, and Contact, retain the page’s existing loader and do not add another script.
+On Home, Assessment, and Contact, retain the page’s single loader and do not add another script.
 
 - [ ] **Step 4: Add the loader to pages that do not already use Typeform**
 
@@ -102,14 +103,18 @@ Run: `npm test`
 
 Expected: all tests PASS with no failures.
 
+- [ ] **Step 5a: Replace the Home readiness embed with a direct button**
+
+Update the Home contract first so it requires no readiness-form ID or fallback link and does require a “Take the Assessment” link to `assessment/`. Confirm that focused test fails, then replace the Home embed panel with the branded button. Keep the page’s Typeform loader because the global newsletter popover still requires it.
+
 - [ ] **Step 6: Verify real browser initialization**
 
-Serve the repository locally and inspect Home, Collective, Assessment, Standards, and Contact at desktop and mobile widths. Confirm each page creates one `.tf-v1-popover-button`, has no horizontal overflow, and the pre-existing inline Typeforms still create their expected frames.
+Serve the repository locally and inspect Home, Collective, Assessment, Standards, and Contact at desktop and mobile widths. Confirm each page creates one `.tf-v1-popover-button`, has no horizontal overflow, Home displays the assessment button without the old blank panel, and the dedicated inline Typeforms still create their expected frames.
 
 - [ ] **Step 7: Commit the implementation**
 
 ```bash
-git add index.html collective/index.html assessment/index.html insights/index.html insights/kaindly-standards/index.html about/index.html contact/index.html tests/site.test.mjs
+git add index.html collective/index.html assessment/index.html insights/index.html insights/kaindly-standards/index.html about/index.html contact/index.html assets/css/site.css tests/site.test.mjs docs/superpowers/specs/2026-08-11-global-newsletter-popover-design.md docs/superpowers/plans/2026-08-11-global-newsletter-popover.md
 git commit -m "feat: add global newsletter popover"
 ```
 
