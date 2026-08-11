@@ -155,10 +155,10 @@ test("Home and Assessment expose the supplied Typeforms with fallbacks", () => {
   const assessment = readFileSync("assessment/index.html", "utf8");
 
   assert.match(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
-  assert.match(home, /https:\/\/form\.typeform\.com\/to\/01KJ3V41DCC0V9P0VT0T97XK4E/);
+  assert.match(home, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((home.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(assessment, /data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"/);
-  assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/01KJ3TB8AV4EBVV6P51RE768EB/);
+  assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
 });
 ```
@@ -191,7 +191,7 @@ Create `assessment/index.html` by adapting the existing page shell. Set unique m
 <section class="section typeform-section">
   <div class="container typeform-panel">
     <div data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"></div>
-    <p class="embed-fallback">If the assessment does not load, <a href="https://form.typeform.com/to/01KJ3TB8AV4EBVV6P51RE768EB" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p>
+    <p class="embed-fallback">If the assessment does not load, <a href="https://form.typeform.com/to/V6UyKfJp" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p>
   </div>
 </section>
 <script src="https://embed.typeform.com/next/embed.js" async></script>
@@ -203,7 +203,7 @@ Insert the Home section immediately after `.hero-home`:
 <section class="section section--lavender home-assessment">
   <div class="container typeform-layout">
     <div class="section-heading"><p class="eyebrow">Start With Clarity</p><h2>Where Do You Stand With AI?</h2><p>Use this short assessment to identify your current starting point and the next capability worth building.</p></div>
-    <div class="typeform-panel"><div data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"></div><p class="embed-fallback">If the form does not load, <a href="https://form.typeform.com/to/01KJ3V41DCC0V9P0VT0T97XK4E" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p></div>
+    <div class="typeform-panel"><div data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"></div><p class="embed-fallback">If the form does not load, <a href="https://form.typeform.com/to/V6UyKfJp" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p></div>
   </div>
 </section>
 <script src="https://embed.typeform.com/next/embed.js" async></script>
@@ -252,7 +252,7 @@ test("Contact exposes embedded scheduling, messaging, and assessment paths", () 
   assert.match(html, /class="acuity-booking-bar" style="display: none;"/);
   assert.match(html, /owner=38041134&amp;ref=booking_button/);
   assert.match(html, /data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"/);
-  assert.match(html, /https:\/\/form\.typeform\.com\/to\/01KZS1XDVQMV2J1AP4SMMSTQZ6/);
+  assert.match(html, /https:\/\/form\.typeform\.com\/to\/CLwbVZRw/);
   assert.equal((html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(html, /Not Sure Where You Stand\?/);
   assert.match(html, /href="\.\.\/assessment\/"/);
@@ -283,7 +283,7 @@ Add a new section beneath scheduling:
 ```html
 <section class="section section--soft">
   <div class="container contact-pathways">
-    <article class="message-panel"><h2>Send Us a Message</h2><p>Tell us where you are and what you're working toward. We reply within two business days.</p><div data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"></div><p class="embed-fallback">If the form does not load, <a href="https://form.typeform.com/to/01KZS1XDVQMV2J1AP4SMMSTQZ6" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p></article>
+    <article class="message-panel"><h2>Send Us a Message</h2><p>Tell us where you are and what you're working toward. We reply within two business days.</p><div data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"></div><p class="embed-fallback">If the form does not load, <a href="https://form.typeform.com/to/CLwbVZRw" target="_blank" rel="noopener noreferrer">open it directly in Typeform</a>.</p></article>
     <aside class="assessment-card"><h2>Not Sure Where You Stand?</h2><p>Take the 10-minute AI Readiness Assessment and get a recommended starting point.</p><a class="text-link" href="../assessment/">Take the Assessment <span aria-hidden="true">→</span></a></aside>
   </div>
 </section>

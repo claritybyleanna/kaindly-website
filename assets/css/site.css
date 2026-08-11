@@ -36,6 +36,7 @@ html {
 }
 
 body {
+  overflow-x: clip;
   margin: 0;
   background: var(--white);
   color: var(--charcoal);
@@ -2049,10 +2050,12 @@ strong {
     gap: 0;
     padding: 24px;
     background: var(--white);
-    transform: translateX(100%);
-    transition: transform 220ms ease-out;
+    opacity: 0;
+    pointer-events: none;
+    visibility: hidden;
+    transition: opacity 180ms ease-out, visibility 180ms ease-out;
   }
-  .js .nav-list[data-open="true"] { transform: translateX(0); }
+  .js .nav-list[data-open="true"] { opacity: 1; pointer-events: auto; visibility: visible; }
   .nav-list a:not(.button) { display: block; padding: 18px 8px; border-bottom: 1px solid var(--grey); font-size: 1rem; }
   .nav-list a:not(.button)::after { display: none; }
   .nav-list .button { margin-top: 20px; }

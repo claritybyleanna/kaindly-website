@@ -65,10 +65,10 @@ test("Home and Assessment expose the supplied Typeforms with fallbacks", () => {
   const assessment = readFileSync("assessment/index.html", "utf8");
 
   assert.match(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
-  assert.match(home, /https:\/\/form\.typeform\.com\/to\/01KJ3V41DCC0V9P0VT0T97XK4E/);
+  assert.match(home, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((home.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(assessment, /data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"/);
-  assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/01KJ3TB8AV4EBVV6P51RE768EB/);
+  assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
 });
 
@@ -185,7 +185,7 @@ test("Contact exposes embedded scheduling, messaging, and assessment paths", () 
   assert.equal((html.match(/https:\/\/embed\.acuityscheduling\.com\/js\/embed\.js/g) || []).length, 1);
   assert.match(html, /owner=38041134&amp;ref=booking_button/);
   assert.match(html, /data-tf-live="01KZS1XDVQMV2J1AP4SMMSTQZ6"/);
-  assert.match(html, /https:\/\/form\.typeform\.com\/to\/01KZS1XDVQMV2J1AP4SMMSTQZ6/);
+  assert.match(html, /https:\/\/form\.typeform\.com\/to\/CLwbVZRw/);
   assert.equal((html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(html, /Not Sure Where You Stand\?/);
   assert.match(html, /href="\.\.\/assessment\/"/);

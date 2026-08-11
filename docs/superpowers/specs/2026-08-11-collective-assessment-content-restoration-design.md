@@ -48,7 +48,7 @@ Create a branded page with a concise introduction, expectations-setting copy, an
 - Embed ID: `01KJ3TB8AV4EBVV6P51RE768EB`
 - Script: `https://embed.typeform.com/next/embed.js`
 
-The embed receives enough vertical space to be usable on desktop and mobile without layout collapse. A visible fallback link points to `https://form.typeform.com/to/01KJ3TB8AV4EBVV6P51RE768EB` if the external script is blocked. The script is loaded only once on the page and does not block the rest of the site.
+The embed receives enough vertical space to be usable on desktop and mobile without layout collapse. A visible fallback link points to the verified public form URL `https://form.typeform.com/to/V6UyKfJp` if the external script is blocked. The script is loaded only once on the page and does not block the rest of the site.
 
 ## Home Page Typeform
 
@@ -57,7 +57,7 @@ Add a dedicated, branded assessment section immediately after the Home hero so i
 - Embed ID: `01KJ3V41DCC0V9P0VT0T97XK4E`
 - Script: `https://embed.typeform.com/next/embed.js`
 
-The section includes a short heading and explanation consistent with the existing brand voice. A visible fallback link points to `https://form.typeform.com/to/01KJ3V41DCC0V9P0VT0T97XK4E`. Existing Home sections and calls to action remain intact.
+The section includes a short heading and explanation consistent with the existing brand voice. A visible fallback link points to the verified public form URL `https://form.typeform.com/to/V6UyKfJp`. Existing Home sections and calls to action remain intact.
 
 ## Contact Page Restoration
 
@@ -82,7 +82,7 @@ Add a second responsive Contact section below scheduling. It restores the origin
 
 - The left card is titled “Send Us a Message” and retains the supplied introduction: “Tell us where you are and what you're working toward. We reply within two business days.”
 - The message card embeds Typeform ID `01KZS1XDVQMV2J1AP4SMMSTQZ6` with `https://embed.typeform.com/next/embed.js` loaded once on the Contact page.
-- A visible fallback link points to `https://form.typeform.com/to/01KZS1XDVQMV2J1AP4SMMSTQZ6` if the Typeform embed is blocked.
+- A visible fallback link points to the verified public form URL `https://form.typeform.com/to/CLwbVZRw` if the Typeform embed is blocked.
 - The right card is titled “Not Sure Where You Stand?” and retains the supplied ten-minute assessment description.
 - “Take the Assessment” links to `/assessment/`.
 

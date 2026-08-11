@@ -1,22 +1,26 @@
 # KAINDLY Website
 
-The production KAINDLY website is a lightweight five-page static site built from the official 2026 brand system.
+The production KAINDLY website is a lightweight seven-route static site built from the official 2026 brand system.
 
 ## Pages
 
 - `/` - Home
 - `/collective/` - The Kaindly Collective
-- `/insights/` - Curated Insights previews and category filters
+- `/assessment/` - AI Readiness Assessment
+- `/insights/` - Curated Insights and category filters
+- `/insights/kaindly-standards/` - How We Show Up, the KAINDLY Standards
 - `/about/` - Founders, purpose, and values
-- `/contact/` - Acuity scheduling
+- `/contact/` - Acuity scheduling, messaging, and assessment access
 
-## Scheduling
+## Embedded Experiences
 
-All booking actions use Acuity owner ID `38041134`. The Contact page includes:
+- Home: Typeform readiness experience `01KJ3V41DCC0V9P0VT0T97XK4E`
+- Assessment: Typeform `01KJ3TB8AV4EBVV6P51RE768EB`
+- Contact message: Typeform `01KZS1XDVQMV2J1AP4SMMSTQZ6`
+- Contact scheduling: Acuity owner `38041134`, with an inline scheduler, direct fallback, and general booking bar
+- Collective membership: [Circle founding-member checkout](https://kaindly.circle.so/checkout/founding-member)
 
-- the Acuity booking-button integration;
-- the Acuity booking-bar integration; and
-- a plain direct-scheduling link that remains available if an embed is blocked.
+Each third-party embed has a visible direct link so visitors can continue if an embed is blocked.
 
 ## Verify the Site
 
@@ -58,7 +62,5 @@ Local source packages, the original prototype, and the Squarespace export are in
 
 ## Inputs to Add Later
 
-- Approved full article content
-- A dedicated Collective enrollment or checkout URL
 - Analytics requirements and account details
 - Final custom-domain DNS configuration
