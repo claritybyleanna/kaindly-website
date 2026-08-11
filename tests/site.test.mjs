@@ -10,6 +10,7 @@ const pageFiles = [
   ["about/index.html", "/about/"],
   ["contact/index.html", "/contact/"],
   ["assessment/index.html", "/assessment/"],
+  ["insights/kaindly-standards/index.html", "/insights/kaindly-standards/"],
 ];
 
 const launchAssets = [
@@ -108,7 +109,7 @@ test("Insights filtering matches complete category tokens", async () => {
   assert.equal(insightMatches("ai-news", "ai"), false);
 });
 
-test("Insights presents curated previews without broken article destinations", () => {
+test("Insights presents curated previews and links the published Standards article", () => {
   assert.equal(existsSync("insights/index.html"), true, "Insights page is missing");
   const html = readFileSync("insights/index.html", "utf8");
 
@@ -121,8 +122,32 @@ test("Insights presents curated previews without broken article destinations", (
   assert.match(html, /Exclusion and Inequity Has a New Face in the World of AI/);
   assert.match(html, /Your Company Won't Save You from the AI Revolution/);
   assert.match(html, /KAINDLY Standards/);
-  assert.equal((html.match(/href="\.\.\/insights\/"/g) || []).length, 2);
+  assert.match(html, /href="kaindly-standards\/"/);
+  assert.match(html, /Read Article/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
+
+test("KAINDLY Standards publishes the corrected article verbatim", () => {
+  assert.equal(existsSync("insights/kaindly-standards/index.html"), true, "Standards article is missing");
+  const html = readFileSync("insights/kaindly-standards/index.html", "utf8");
+  const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  assert.match(html, /<title>How We Show Up \| KAINDLY Standards<\/title>/);
+  assert.match(visibleText, /These standards govern how we work—with clients, with each other, and in every decision we make\./);
+  for (const opening of [
+    "We do not shame uncertainty.",
+    "We design for the least confident person in the room.",
+    "We choose clarity over cleverness.",
+    "We build confidence through practice, not proclamation.",
+    "We challenge without diminishing.",
+    "We resist the pressure to move before direction is clear.",
+    "We measure by capability and outcomes, not adoption.",
+  ]) {
+    assert.match(visibleText, new RegExp(opening.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  }
+  assert.match(visibleText, /These standards are not negotiable\./);
+  assert.match(visibleText, /They are how KAINDLY earns the right to guide/);
+  assert.doesNotMatch(visibleText, /We lead AI\. We don.t chase it\./i);
 });
 
 test("About introduces both founders before the company story", () => {
