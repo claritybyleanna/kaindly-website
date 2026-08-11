@@ -59,6 +59,35 @@ Add a dedicated, branded assessment section immediately after the Home hero so i
 
 The section includes a short heading and explanation consistent with the existing brand voice. A visible fallback link points to `https://form.typeform.com/to/01KJ3V41DCC0V9P0VT0T97XK4E`. Existing Home sections and calls to action remain intact.
 
+## Contact Page Restoration
+
+Preserve the current Contact hero, “What to Expect” content, scheduling notes, general Acuity booking bar, and footer. Restore the two pathways from the original Contact design while upgrading both forms to working third-party embeds.
+
+### Embedded Scheduling
+
+Replace the narrow scheduling-button panel with the supplied inline Acuity scheduler:
+
+- Iframe URL: `https://app.acuityscheduling.com/schedule.php?owner=38041134&ref=embedded_csp`
+- Iframe title: `Schedule Appointment`
+- Iframe height: `800`
+- Permission: `payment`
+- Responsive width: `100%`
+- Script: `https://embed.acuityscheduling.com/js/embed.js`
+
+The “What to Expect” content remains beside the scheduler on larger screens, using approximately one-third of the row while the scheduler receives approximately two-thirds. On smaller screens, the scheduler stacks below the introduction. Retain a visible direct-scheduling link using the existing Acuity booking URL in case the iframe is blocked. Retain the supplied general booking bar at the page level.
+
+### Send Us a Message and Assessment
+
+Add a second responsive Contact section below scheduling. It restores the original wide message card and narrow supporting card:
+
+- The left card is titled “Send Us a Message” and retains the supplied introduction: “Tell us where you are and what you're working toward. We reply within two business days.”
+- The message card embeds Typeform ID `01KZS1XDVQMV2J1AP4SMMSTQZ6` with `https://embed.typeform.com/next/embed.js` loaded once on the Contact page.
+- A visible fallback link points to `https://form.typeform.com/to/01KZS1XDVQMV2J1AP4SMMSTQZ6` if the Typeform embed is blocked.
+- The right card is titled “Not Sure Where You Stand?” and retains the supplied ten-minute assessment description.
+- “Take the Assessment” links to `/assessment/`.
+
+The cards stack vertically on small screens. The existing scheduling experience remains separate and is not duplicated inside this restored message section.
+
 ## KAINDLY Standards Article
 
 On the Insights page, convert the KAINDLY Standards preview into a real article link targeting `/insights/kaindly-standards/`. Preserve the other existing insight previews and filters.
@@ -94,6 +123,7 @@ The two new pages receive unique titles, descriptions, canonical paths, favicon 
 ## Accessibility and Resilience
 
 - Typeform areas have descriptive headings and fallback links.
+- The Acuity iframe has a descriptive title and a direct-booking fallback.
 - External scripts use HTTPS and load asynchronously.
 - Core content, navigation, Circle checkout links, and fallback Typeform links work without site JavaScript.
 - The article uses semantic article structure and avoids presenting decorative quotations as inaccessible text images.
@@ -106,6 +136,8 @@ Automated checks will confirm:
 - All seven routes and their local assets resolve.
 - Each Typeform ID appears on the correct page and its script appears exactly once there.
 - Each Typeform has the correct direct fallback URL.
+- The Contact page includes the supplied Acuity iframe URL, title, height, payment permission, embed script, booking bar, and direct fallback link.
+- The Contact page includes the message Typeform, its fallback, and an assessment card linking to `/assessment/`.
 - All Collective membership actions use the supplied Circle checkout URL.
 - The complete Collective sections, `$97/month` price, enrollment label, six audience cards, five benefits, five pathways, and all four comparison prices are present.
 - The Standards preview links to the article route.
