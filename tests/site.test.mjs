@@ -51,15 +51,18 @@ test("Vercel serves the approved maintenance wall on every application route", (
     src: "/assets/(.*)",
     dest: "/assets/$1",
   });
-  assert.deepEqual(config.routes[1], {
-    src: "/(.*)",
-    dest: "/maintenance.html",
-    status: 503,
-    headers: {
-      "Cache-Control": "no-store, max-age=0",
-      "Retry-After": "3600",
-      "X-Robots-Tag": "noindex, nofollow",
-    },
+  const maintenanceRoute = config.routes[1];
+  const maintenanceRouteMatcher = new RegExp(`^${maintenanceRoute.src}$`);
+  for (const route of ["/", "/about/", "/an-unknown-path"]) {
+    assert.equal(maintenanceRouteMatcher.test(route), true, `${route} must receive the maintenance wall`);
+  }
+  assert.equal(maintenanceRouteMatcher.test("/maintenance.html"), false, "The maintenance document must not rewrite to itself");
+  assert.equal(maintenanceRoute.dest, "/maintenance.html");
+  assert.equal(maintenanceRoute.status, 503);
+  assert.deepEqual(maintenanceRoute.headers, {
+    "Cache-Control": "no-store, max-age=0",
+    "Retry-After": "3600",
+    "X-Robots-Tag": "noindex, nofollow",
   });
 });
 

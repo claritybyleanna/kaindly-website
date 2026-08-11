@@ -6,7 +6,7 @@
       "dest": "/assets/$1"
     },
     {
-      "src": "/(.*)",
+      "src": "/(?!maintenance\\.html$)(.*)",
       "dest": "/maintenance.html",
       "status": 503,
       "headers": {
