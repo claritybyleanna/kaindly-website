@@ -1,7 +1,7 @@
 # KAINDLY Claude Export Import Design
 
 **Date:** 2026-08-11  
-**Status:** Approved design; awaiting written-spec review  
+**Status:** Approved design; revised per written-spec review
 **Source:** `/Users/leanna/Downloads/export 4/kaindly-site`
 
 ## Goal
@@ -10,9 +10,9 @@ Adopt the complete Claude-edited export as the new source of truth for KAINDLY's
 
 ## Approved Approach
 
-Use a controlled full replacement of the public-site surface. Copy the export's pages, shared styling, shared JavaScript, images, icons, logos, and brand assets into the permanent `preview` branch. Preserve repository and deployment files that are not part of the public design.
+Use an exact, non-destructive overlay of the export onto the permanent `preview` branch. Copy every file from the export into the same relative path in the site. Overwrite matching paths and add paths that do not yet exist. Delete nothing else.
 
-This avoids mixing the old and new design systems while preventing a wholesale folder copy from overwriting deployment infrastructure.
+This makes the exported files authoritative wherever they overlap while preserving every existing site or infrastructure file the export does not contain.
 
 ## Import Scope
 
@@ -31,7 +31,7 @@ The export becomes authoritative for:
 - Shared CSS and JavaScript
 - Exported founder photos, site imagery, icons, logos, and brand assets
 
-Files present in the current site but absent from the export are not retained in the public surface unless they are required infrastructure or an explicitly preserved integration.
+Files present in the current site but absent from the export remain exactly where they are. The import performs no cleanup or deletion.
 
 ## Preserved Infrastructure
 
@@ -64,9 +64,9 @@ The exported destinations are accepted as authoritative where they provide direc
 
 ## Asset Rules
 
-Claude-exported assets replace matching public assets and add new assets. The import must preserve `assets/brand/og.png` because the export does not contain a replacement social image. Infrastructure-only files such as `.nojekyll`, `.gitignore`, and `README.md` remain unchanged.
+Claude-exported assets overwrite matching public paths and add new paths. The import preserves `assets/brand/og.png` because the export does not contain a matching path. Infrastructure-only files such as `.nojekyll`, `.gitignore`, and `README.md` remain unchanged because the overlay contains no replacements for them.
 
-Every imported local image, stylesheet, script, logo, and page link must resolve from its deployed route. Duplicate asset families included in the export may remain when referenced by the exported pages; unused legacy public assets may be removed only when the link validator proves they are unreferenced.
+Every imported local image, stylesheet, script, logo, and page link must resolve from its deployed route. Duplicate asset families and unused legacy files remain; no file may be removed as part of this import.
 
 ## Responsive and Accessibility Behavior
 
@@ -106,10 +106,11 @@ If the import fails validation or the deployed Preview is incorrect, the prior k
 The import is complete when:
 
 1. Claude's exported design and content are visible across all included pages.
-2. All required embeds, buttons, destinations, and internal links work.
-3. Desktop and phone layouts pass visual review.
-4. Automated tests and link validation pass.
-5. The stable Vercel Preview is public, returns the full site with `noindex`, and requires no login.
-6. `kaindly.ai`, `www.kaindly.ai`, and the Production Vercel alias still return the maintenance wall.
-7. GitHub Pages remains unpublished.
-
+2. Every export file exists at the same relative site path and matches the export byte-for-byte.
+3. No pre-existing path absent from the export is deleted.
+4. All required embeds, buttons, destinations, and internal links work.
+5. Desktop and phone layouts pass visual review.
+6. Automated tests and link validation pass.
+7. The stable Vercel Preview is public, returns the full site with `noindex`, and requires no login.
+8. `kaindly.ai`, `www.kaindly.ai`, and the Production Vercel alias still return the maintenance wall.
+9. GitHub Pages remains unpublished.
