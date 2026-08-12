@@ -55,7 +55,7 @@ The imported site must retain and verify:
 - Acuity booking owner `38041134`, including direct booking links and the Contact scheduler embed
 - AI Readiness Assessment Typeform `01KJ3TB8AV4EBVV6P51RE768EB`
 - Contact message Typeform `01KZS1XDVQMV2J1AP4SMMSTQZ6`
-- Sitewide newsletter trigger and Typeform `01KZS2YNAZC5SMZR13X20CRVKZ`
+- Sitewide newsletter button and Beehiiv form `7f631179-635f-49de-8c8f-063918eadc8c`
 - KAINDLY Collective checkout at `https://kaindly.circle.so/checkout/founding-member`
 - Contact email `hello@kaindly.ai`
 - Internal navigation between all imported pages and articles
@@ -87,8 +87,8 @@ Automated checks will be updated to reflect the new source of truth rather than 
 
 - Every exported page exists and has unique metadata and landmarks
 - Every local page link and referenced asset resolves
-- Each required Typeform, Acuity, Circle, and email destination is present in the correct location
-- Newsletter initialization appears exactly once on every page
+- Each required Typeform, Acuity, Circle, Beehiiv, and email destination is present in the correct location
+- The Beehiiv form loader and attribution script appear exactly once on every page
 - The new article and legal pages are reachable from the intended index/footer links
 - Responsive CSS includes the exported desktop and phone behavior
 - Environment-aware middleware still gives Preview the full site and Production the unchanged maintenance wall
