@@ -33,6 +33,29 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
+test("brand SVG variants preserve their official semantic colors", () => {
+  const officialLogoKitMappings = [
+    ["assets/brand/icon-violet.svg", "#6953c4"],
+    ["assets/brand/icon-white.svg", "#fff"],
+    ["assets/brand/logo-primary-violet.svg", "#6953c4"],
+    ["assets/brand/logo-secondary-violet.svg", "#6953c4"],
+    ["assets/brand/logo-secondary-white.svg", "#fff"],
+    ["assets/brand/tagline-white.svg", "#fff"],
+  ];
+
+  for (const [file, expectedFill] of officialLogoKitMappings) {
+    const svg = readFileSync(file, "utf8");
+    assert.match(svg, new RegExp(`fill\\s*(?:=\\s*\"${expectedFill}\"|:\\s*${expectedFill})`, "i"), `${file} lost its official ${expectedFill} fill`);
+  }
+
+  for (const [violet, white] of [
+    ["assets/brand/icon-violet.svg", "assets/brand/icon-white.svg"],
+    ["assets/brand/logo-secondary-violet.svg", "assets/brand/logo-secondary-white.svg"],
+  ]) {
+    assert.notEqual(readFileSync(violet, "utf8"), readFileSync(white, "utf8"), `${violet} and ${white} must remain distinct variants`);
+  }
+});
+
 async function withVercelEnv(value, run) {
   const previous = process.env.VERCEL_ENV;
   if (value === undefined) delete process.env.VERCEL_ENV;
