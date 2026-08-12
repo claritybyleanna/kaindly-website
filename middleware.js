@@ -1,3 +1,11 @@
+import { next } from "@vercel/functions";
+
+const FULL_SITE_ENVIRONMENTS = new Set(["preview", "development"]);
+
+export function isFullSiteEnvironment(value = process.env.VERCEL_ENV) {
+  return FULL_SITE_ENVIRONMENTS.has(value);
+}
+
 const maintenanceDocument = `<!doctype html>
 <html lang="en">
 <head>
@@ -150,6 +158,8 @@ export const config = {
 };
 
 export default function maintenanceMiddleware() {
+  if (isFullSiteEnvironment()) return next();
+
   return new Response(maintenanceDocument, {
     status: 503,
     headers: {
