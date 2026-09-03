@@ -146,6 +146,14 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
+test("Home hero headline remains responsive without fixed inline dimensions", () => {
+  const home = readFileSync("index.html", "utf8");
+  const heroHeadline = home.match(/<section class="hero-home">[\s\S]*?<h1([^>]*)>/)?.[1];
+
+  assert.notEqual(heroHeadline, undefined, "Home hero headline is missing");
+  assert.doesNotMatch(heroHeadline, /\bstyle\s*=|\b(?:width|height)\s*=/i);
+});
+
 test("Home links to the Assessment while the Assessment embeds its Typeform", () => {
   assert.equal(existsSync("assessment/index.html"), true, "Assessment page is missing");
   const home = readFileSync("index.html", "utf8");
