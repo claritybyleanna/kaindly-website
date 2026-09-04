@@ -1749,7 +1749,7 @@ strong {
 }
 
 .article-sources p {
-  color: var(--grey);
+  color: #e2e1e6;
   font-size: 0.82rem;
   line-height: 1.55;
 }
