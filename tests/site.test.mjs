@@ -327,7 +327,7 @@ test("the Take Charge of Your AI Future article is published from Insights", () 
 
   assert.equal(existsSync(articlePath), true, "Take Charge article page is missing");
   assert.match(insights, /href="take-charge-of-your-ai-future\/"/);
-  assert.match(insights, /4 insights shown/);
+  assert.match(insights, /3 insights shown/);
 
   const article = readFileSync(articlePath, "utf8");
   assert.match(article, /<h1>Your Company Won(?:'|’|&rsquo;)t Save You from the AI Revolution/);
@@ -335,6 +335,12 @@ test("the Take Charge of Your AI Future article is published from Insights", () 
   assert.match(article, /process pros, not tech prodigies/i);
   assert.match(article, /class="[^"]*\barticle-sources\b[^"]*"/);
   assert.match(article, /href="https:\/\/onewereach\.org\/take-charge-of-your-ai-future\/"/);
+  assert.match(article, /href="https:\/\/onewereach\.org\/ai-academy\/"/);
+  assert.match(article, /The next cohort begins March 2026\./);
+
+  const css = readFileSync("assets/css/site.css", "utf8");
+  const phoneRules = css.match(/@media \(max-width: 640px\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(phoneRules, /\.article-header h1\s*\{[^}]*font-size:/);
 });
 
 test("About introduces both founders before the company story", () => {

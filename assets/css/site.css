@@ -2234,6 +2234,7 @@ strong {
   .filter-list, .insights-grid { grid-template-columns: 1fr; }
   .story-card h3 { min-height: 0; }
   .article-header { padding: 76px 0 62px; }
+  .article-header h1 { font-size: clamp(3rem, 14vw, 4rem); }
   .article-body { padding-block: 68px 82px; }
   .standards-commitment { padding: 32px 26px; }
   .founder-grid, .values-layout { grid-template-columns: 1fr; }
