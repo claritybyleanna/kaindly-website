@@ -12,6 +12,7 @@ const pageFiles = [
   ["assessment/index.html", "/assessment/"],
   ["insights/kaindly-standards/index.html", "/insights/kaindly-standards/"],
   ["insights/exclusion-inequity-ai/index.html", "/insights/exclusion-inequity-ai/"],
+  ["insights/take-charge-of-your-ai-future/index.html", "/insights/take-charge-of-your-ai-future/"],
   ["privacy/index.html", "/privacy/"],
   ["terms/index.html", "/terms/"],
 ];
@@ -318,6 +319,22 @@ test("the Exclusion and Inequity article is published from Insights", () => {
   assert.match(index, /href="exclusion-inequity-ai\/"/);
   assert.match(article, /Exclusion and Inequity Has a New Face in the World of AI/i);
   assert.match(article.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), /What we're facing isn't a skill gap\. It's an access gap\./);
+});
+
+test("the Take Charge of Your AI Future article is published from Insights", () => {
+  const insights = readFileSync("insights/index.html", "utf8");
+  const articlePath = "insights/take-charge-of-your-ai-future/index.html";
+
+  assert.equal(existsSync(articlePath), true, "Take Charge article page is missing");
+  assert.match(insights, /href="take-charge-of-your-ai-future\/"/);
+  assert.match(insights, /4 insights shown/);
+
+  const article = readFileSync(articlePath, "utf8");
+  assert.match(article, /<h1>Your Company Won(?:'|’|&rsquo;)t Save You from the AI Revolution/);
+  assert.match(article, /Written by Barbara Salami/i);
+  assert.match(article, /process pros, not tech prodigies/i);
+  assert.match(article, /class="[^"]*\barticle-sources\b[^"]*"/);
+  assert.match(article, /href="https:\/\/onewereach\.org\/take-charge-of-your-ai-future\/"/);
 });
 
 test("About introduces both founders before the company story", () => {
