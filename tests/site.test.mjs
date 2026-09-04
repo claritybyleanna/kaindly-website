@@ -335,10 +335,11 @@ test("the Take Charge of Your AI Future article is published from Insights", () 
   assert.match(article, /process pros, not tech prodigies/i);
   assert.match(article, /class="[^"]*\barticle-sources\b[^"]*"/);
   assert.match(article, /href="https:\/\/onewereach\.org\/take-charge-of-your-ai-future\/"/);
-  assert.match(article, /href="https:\/\/onewereach\.org\/ai-academy\/"/);
-  assert.match(article, /The next cohort begins March 2026\./);
+  assert.doesNotMatch(article, /href="https:\/\/onewereach\.org\/ai-academy\/"/);
+  assert.doesNotMatch(article, /The next cohort begins March 2026\./);
 
   const css = readFileSync("assets/css/site.css", "utf8");
+  assert.match(css, /\.article-sources p\s*\{[^}]*color:\s*var\(--grey\);[^}]*font-size:\s*0\.82rem;/s);
   const phoneRules = css.match(/@media \(max-width: 640px\) \{[\s\S]*?\n\}/)?.[0] || "";
   assert.match(phoneRules, /\.article-header h1\s*\{[^}]*font-size:/);
 });

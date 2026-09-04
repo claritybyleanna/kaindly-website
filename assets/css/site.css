@@ -1748,6 +1748,18 @@ strong {
   margin-top: 8px;
 }
 
+.article-sources p {
+  color: var(--grey);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+.article-sources #article-sources-heading {
+  color: var(--white);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .article-back-link {
   display: inline-flex;
   align-items: center;
