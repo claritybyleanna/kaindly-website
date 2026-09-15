@@ -70,7 +70,7 @@ async function withVercelEnv(value, run) {
   }
 }
 
-test("Vercel middleware separates Preview from the production maintenance wall", async () => {
+test("Vercel middleware serves the full site in production and keeps maintenance as a fallback", async () => {
   assert.equal(existsSync("middleware.js"), true, "Vercel routing middleware is missing");
 
   const { config, default: maintenanceMiddleware, isFullSiteEnvironment } = await import("../middleware.js");
@@ -81,17 +81,17 @@ test("Vercel middleware separates Preview from the production maintenance wall",
 
   assert.equal(isFullSiteEnvironment("preview"), true);
   assert.equal(isFullSiteEnvironment("development"), true);
-  assert.equal(isFullSiteEnvironment("production"), false);
+  assert.equal(isFullSiteEnvironment("production"), true);
   assert.equal(isFullSiteEnvironment("staging"), false);
   assert.equal(isFullSiteEnvironment(undefined), false);
 
-  for (const environment of ["preview", "development"]) {
+  for (const environment of ["production", "preview", "development"]) {
     const response = await withVercelEnv(environment, () => maintenanceMiddleware());
     assert.equal(response.status, 200, `${environment} must continue to the static site`);
     assert.equal(response.headers.get("x-middleware-next"), "1");
   }
 
-  for (const environment of ["production", "staging", undefined]) {
+  for (const environment of ["staging", undefined]) {
     const response = await withVercelEnv(environment, () => maintenanceMiddleware());
     assert.equal(response.status, 503, `${environment ?? "missing"} must fail closed`);
     assert.deepEqual(Object.fromEntries(response.headers), {
@@ -105,7 +105,7 @@ test("Vercel middleware separates Preview from the production maintenance wall",
     assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
   }
 
-  const maintenance = await withVercelEnv("production", async () =>
+  const maintenance = await withVercelEnv("staging", async () =>
     (await maintenanceMiddleware()).text(),
   );
   assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);

@@ -1,6 +1,6 @@
 import { next } from "@vercel/functions";
 
-const FULL_SITE_ENVIRONMENTS = new Set(["preview", "development"]);
+const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
