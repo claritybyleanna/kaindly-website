@@ -57,16 +57,21 @@ test("brand SVG variants preserve their official semantic colors", () => {
   }
 });
 
-async function withVercelEnv(value, run) {
-  const previous = process.env.VERCEL_ENV;
-  if (value === undefined) delete process.env.VERCEL_ENV;
-  else process.env.VERCEL_ENV = value;
+async function withVercelEnv({ environment, targetEnvironment }, run) {
+  const previousEnvironment = process.env.VERCEL_ENV;
+  const previousTargetEnvironment = process.env.VERCEL_TARGET_ENV;
+  if (environment === undefined) delete process.env.VERCEL_ENV;
+  else process.env.VERCEL_ENV = environment;
+  if (targetEnvironment === undefined) delete process.env.VERCEL_TARGET_ENV;
+  else process.env.VERCEL_TARGET_ENV = targetEnvironment;
 
   try {
     return await run();
   } finally {
-    if (previous === undefined) delete process.env.VERCEL_ENV;
-    else process.env.VERCEL_ENV = previous;
+    if (previousEnvironment === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = previousEnvironment;
+    if (previousTargetEnvironment === undefined) delete process.env.VERCEL_TARGET_ENV;
+    else process.env.VERCEL_TARGET_ENV = previousTargetEnvironment;
   }
 }
 
@@ -86,13 +91,13 @@ test("Vercel middleware serves the full site in production and keeps maintenance
   assert.equal(isFullSiteEnvironment(undefined), false);
 
   for (const environment of ["production", "preview", "development"]) {
-    const response = await withVercelEnv(environment, () => maintenanceMiddleware());
+    const response = await withVercelEnv({ environment }, () => maintenanceMiddleware());
     assert.equal(response.status, 200, `${environment} must continue to the static site`);
     assert.equal(response.headers.get("x-middleware-next"), "1");
   }
 
   for (const environment of ["staging", undefined]) {
-    const response = await withVercelEnv(environment, () => maintenanceMiddleware());
+    const response = await withVercelEnv({ environment }, () => maintenanceMiddleware());
     assert.equal(response.status, 503, `${environment ?? "missing"} must fail closed`);
     assert.deepEqual(Object.fromEntries(response.headers), {
       "cache-control": "no-store, max-age=0",
@@ -105,7 +110,13 @@ test("Vercel middleware serves the full site in production and keeps maintenance
     assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
   }
 
-  const maintenance = await withVercelEnv("staging", async () =>
+  const customStagingResponse = await withVercelEnv(
+    { environment: "preview", targetEnvironment: "staging" },
+    () => maintenanceMiddleware(),
+  );
+  assert.equal(customStagingResponse.status, 503, "custom staging must retain the maintenance fallback");
+
+  const maintenance = await withVercelEnv({ environment: "staging" }, async () =>
     (await maintenanceMiddleware()).text(),
   );
   assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);
