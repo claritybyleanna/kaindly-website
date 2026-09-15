@@ -11,6 +11,10 @@ const pageFiles = [
   ["contact/index.html", "/contact/"],
   ["assessment/index.html", "/assessment/"],
   ["insights/kaindly-standards/index.html", "/insights/kaindly-standards/"],
+  ["insights/exclusion-inequity-ai/index.html", "/insights/exclusion-inequity-ai/"],
+  ["insights/take-charge-of-your-ai-future/index.html", "/insights/take-charge-of-your-ai-future/"],
+  ["privacy/index.html", "/privacy/"],
+  ["terms/index.html", "/terms/"],
 ];
 
 const launchAssets = [
@@ -30,6 +34,101 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
+test("brand SVG variants preserve their official semantic colors", () => {
+  const officialLogoKitMappings = [
+    ["assets/brand/icon-violet.svg", "#6953c4"],
+    ["assets/brand/icon-white.svg", "#fff"],
+    ["assets/brand/logo-primary-violet.svg", "#6953c4"],
+    ["assets/brand/logo-secondary-violet.svg", "#6953c4"],
+    ["assets/brand/logo-secondary-white.svg", "#fff"],
+    ["assets/brand/tagline-white.svg", "#fff"],
+  ];
+
+  for (const [file, expectedFill] of officialLogoKitMappings) {
+    const svg = readFileSync(file, "utf8");
+    assert.match(svg, new RegExp(`fill\\s*(?:=\\s*\"${expectedFill}\"|:\\s*${expectedFill})`, "i"), `${file} lost its official ${expectedFill} fill`);
+  }
+
+  for (const [violet, white] of [
+    ["assets/brand/icon-violet.svg", "assets/brand/icon-white.svg"],
+    ["assets/brand/logo-secondary-violet.svg", "assets/brand/logo-secondary-white.svg"],
+  ]) {
+    assert.notEqual(readFileSync(violet, "utf8"), readFileSync(white, "utf8"), `${violet} and ${white} must remain distinct variants`);
+  }
+});
+
+async function withVercelEnv({ environment, targetEnvironment }, run) {
+  const previousEnvironment = process.env.VERCEL_ENV;
+  const previousTargetEnvironment = process.env.VERCEL_TARGET_ENV;
+  if (environment === undefined) delete process.env.VERCEL_ENV;
+  else process.env.VERCEL_ENV = environment;
+  if (targetEnvironment === undefined) delete process.env.VERCEL_TARGET_ENV;
+  else process.env.VERCEL_TARGET_ENV = targetEnvironment;
+
+  try {
+    return await run();
+  } finally {
+    if (previousEnvironment === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = previousEnvironment;
+    if (previousTargetEnvironment === undefined) delete process.env.VERCEL_TARGET_ENV;
+    else process.env.VERCEL_TARGET_ENV = previousTargetEnvironment;
+  }
+}
+
+test("Vercel middleware serves the full site in production and keeps maintenance as a fallback", async () => {
+  assert.equal(existsSync("middleware.js"), true, "Vercel routing middleware is missing");
+
+  const { config, default: maintenanceMiddleware, isFullSiteEnvironment } = await import("../middleware.js");
+  const matcher = new RegExp(`^${config.matcher[0]}$`);
+  assert.equal(matcher.test("/"), true);
+  assert.equal(matcher.test("/about/"), true);
+  assert.equal(matcher.test("/assets/brand/logo-secondary-violet.svg"), false);
+
+  assert.equal(isFullSiteEnvironment("preview"), true);
+  assert.equal(isFullSiteEnvironment("development"), true);
+  assert.equal(isFullSiteEnvironment("production"), true);
+  assert.equal(isFullSiteEnvironment("staging"), false);
+  assert.equal(isFullSiteEnvironment(undefined), false);
+
+  for (const environment of ["production", "preview", "development"]) {
+    const response = await withVercelEnv({ environment }, () => maintenanceMiddleware());
+    assert.equal(response.status, 200, `${environment} must continue to the static site`);
+    assert.equal(response.headers.get("x-middleware-next"), "1");
+  }
+
+  for (const environment of ["staging", undefined]) {
+    const response = await withVercelEnv({ environment }, () => maintenanceMiddleware());
+    assert.equal(response.status, 503, `${environment ?? "missing"} must fail closed`);
+    assert.deepEqual(Object.fromEntries(response.headers), {
+      "cache-control": "no-store, max-age=0",
+      "content-type": "text/html; charset=utf-8",
+      "retry-after": "3600",
+      "x-robots-tag": "noindex, nofollow",
+    });
+    const maintenance = await response.text();
+    assert.match(maintenance, /Our site is being updated\./);
+    assert.match(maintenance, /href="mailto:hello@kaindly\.ai"/);
+  }
+
+  const customStagingResponse = await withVercelEnv(
+    { environment: "preview", targetEnvironment: "staging" },
+    () => maintenanceMiddleware(),
+  );
+  assert.equal(customStagingResponse.status, 503, "custom staging must retain the maintenance fallback");
+
+  const maintenance = await withVercelEnv({ environment: "staging" }, async () =>
+    (await maintenanceMiddleware()).text(),
+  );
+  assert.match(maintenance, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(maintenance, /A Thoughtful Update Is Underway/);
+  assert.match(maintenance, /Thank you for your patience while we make thoughtful improvements to the KAINDLY experience\./);
+  assert.match(maintenance, /Lead AI\. Don(?:’|&rsquo;)t Chase It\./);
+  assert.equal((maintenance.match(/<a\b/g) || []).length, 1);
+  assert.equal((maintenance.match(/mailto:hello@kaindly\.ai/g) || []).length, 1);
+  assert.doesNotMatch(maintenance, /<nav\b|acuityscheduling|data-tf-live|Schedule Appointment|Book a Call/i);
+  assert.doesNotMatch(maintenance, /<(?:button|input|select|textarea|form|iframe)\b/i);
+});
+
 test("Home exposes the shared, accessible launch shell", () => {
   assert.equal(existsSync("index.html"), true, "index.html is missing");
   assert.equal(existsSync("assets/css/site.css"), true, "shared stylesheet is missing");
@@ -45,9 +144,9 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.equal((html.match(/<main\b/g) || []).length, 1);
   assert.equal((html.match(/<\/main>/g) || []).length, 1);
   assert.match(html, /<nav[^>]+aria-label="Primary navigation"/);
-  assert.match(html, /href="\.\/"[^>]+aria-current="page"/);
-  for (const route of ["collective/", "insights/", "about/", "contact/"]) {
-    assert.match(html, new RegExp(`href="${route.replace("/", "\\/")}"`));
+  assert.match(html, /href="index\.html"[^>]+aria-current="page"/);
+  for (const route of ["collective/index.html", "insights/index.html", "about/index.html", "contact/index.html"]) {
+    assert.match(html, new RegExp(`href="${route.replaceAll(".", "\\.").replaceAll("/", "\\/")}"`));
   }
   assert.match(html, /Lead AI\. Don't Chase It\./);
   assert.match(html, /owner=38041134&amp;ref=booking_button/);
@@ -59,6 +158,14 @@ test("Home exposes the shared, accessible launch shell", () => {
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
+test("Home hero headline remains responsive without fixed inline dimensions", () => {
+  const home = readFileSync("index.html", "utf8");
+  const heroHeadline = home.match(/<section class="hero-home">[\s\S]*?<h1([^>]*)>/)?.[1];
+
+  assert.notEqual(heroHeadline, undefined, "Home hero headline is missing");
+  assert.doesNotMatch(heroHeadline, /\bstyle\s*=|\b(?:width|height)\s*=/i);
+});
+
 test("Home links to the Assessment while the Assessment embeds its Typeform", () => {
   assert.equal(existsSync("assessment/index.html"), true, "Assessment page is missing");
   const home = readFileSync("index.html", "utf8");
@@ -66,8 +173,8 @@ test("Home links to the Assessment while the Assessment embeds its Typeform", ()
 
   assert.doesNotMatch(home, /data-tf-live="01KJ3V41DCC0V9P0VT0T97XK4E"/);
   assert.doesNotMatch(home, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
-  assert.match(home, /<a class="button button--accent" href="assessment\/">Take the Assessment<\/a>/);
-  assert.equal((home.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
+  assert.match(home, /<a class="button button--accent" href="assessment\/index\.html">Take the Assessment<\/a>/);
+  assert.doesNotMatch(home, /https:\/\/embed\.typeform\.com\/next\/embed\.js/);
   assert.match(assessment, /data-tf-live="01KJ3TB8AV4EBVV6P51RE768EB"/);
   assert.match(assessment, /https:\/\/form\.typeform\.com\/to\/V6UyKfJp/);
   assert.equal((assessment.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
@@ -128,19 +235,13 @@ test("Home groups FAAI stages and leaves card categories as visible text", () =>
   for (const category of categories) assert.doesNotMatch(category, /\saria-label=/);
 });
 
-test("every page initializes the newsletter popover exactly once", () => {
+test("every page initializes the Beehiiv newsletter exactly once", () => {
   for (const [file] of pageFiles) {
     const html = readFileSync(file, "utf8");
-    assert.equal(
-      (html.match(/data-tf-live="01KZS2YNAZC5SMZR13X20CRVKZ"/g) || []).length,
-      1,
-      `${file} needs one newsletter popover`,
-    );
-    assert.equal(
-      (html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length,
-      1,
-      `${file} needs exactly one Typeform loader`,
-    );
+    assert.equal((html.match(/data-beehiiv-form="7f631179-635f-49de-8c8f-063918eadc8c"/g) || []).length, 1, `${file} needs one Beehiiv form`);
+    assert.equal((html.match(/https:\/\/subscribe-forms\.beehiiv\.com\/v3\/loader\.js/g) || []).length, 1, `${file} needs one Beehiiv loader`);
+    assert.equal((html.match(/https:\/\/subscribe-forms\.beehiiv\.com\/attribution\.js/g) || []).length, 1, `${file} needs one Beehiiv attribution script`);
+    assert.equal((html.match(/class="newsletter-fab"/g) || []).length, 1, `${file} needs one newsletter button`);
   }
 });
 
@@ -152,7 +253,7 @@ test("Collective preserves the complete approved membership offer", () => {
 
   assert.match(html, /<title>KAINDLY \| The Kaindly Collective<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/collective\/">/);
-  assert.match(html, /href="\.\.\/collective\/"[^>]+aria-current="page"/);
+  assert.match(html, /href="\.\.\/collective\/index\.html"[^>]+aria-current="page"/);
   assert.match(visibleText, /Your AI Future Starts With You/);
   assert.match(visibleText, /Not a Course\. A Living Ecosystem\./);
   assert.match(html, /id="experience"/);
@@ -168,7 +269,7 @@ test("Collective preserves the complete approved membership offer", () => {
     assert.match(visibleText, new RegExp(price.replace(/[+$]/g, "\\$&")));
   }
   assert.ok((html.match(new RegExp(circleUrl, "g")) || []).length >= 2);
-  assert.match(html, /href="\.\.\/assessment\/"/);
+  assert.match(html, /href="\.\.\/assessment\/index\.html"/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
@@ -187,13 +288,14 @@ test("Insights presents curated previews and links the published Standards artic
 
   assert.match(html, /<title>KAINDLY \| Insights<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/insights\/">/);
-  assert.match(html, /href="\.\.\/insights\/"[^>]+aria-current="page"/);
+  assert.match(html, /href="\.\.\/insights\/index\.html"[^>]+aria-current="page"/);
   assert.equal((html.match(/data-filter="/g) || []).length, 6);
   assert.equal((html.match(/data-insight-card/g) || []).length, 3);
   assert.match(html, /data-filter="all"[^>]+aria-pressed="true"/);
   assert.match(html, /Exclusion and Inequity Has a New Face in the World of AI/);
   assert.match(html, /Your Company Won't Save You from the AI Revolution/);
   assert.match(html, /KAINDLY Standards/);
+  assert.match(html, /href="exclusion-inequity-ai\/"/);
   assert.match(html, /href="kaindly-standards\/"/);
   assert.match(html, /Read Article/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
@@ -222,13 +324,46 @@ test("KAINDLY Standards publishes the corrected article verbatim", () => {
   assert.doesNotMatch(visibleText, /We lead AI\. We don.t chase it\./i);
 });
 
+test("the Exclusion and Inequity article is published from Insights", () => {
+  const index = readFileSync("insights/index.html", "utf8");
+  const article = readFileSync("insights/exclusion-inequity-ai/index.html", "utf8");
+  assert.match(index, /href="exclusion-inequity-ai\/"/);
+  assert.match(article, /Exclusion and Inequity Has a New Face in the World of AI/i);
+  assert.match(article.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), /What we're facing isn't a skill gap\. It's an access gap\./);
+});
+
+test("the Take Charge of Your AI Future article is published from Insights", () => {
+  const insights = readFileSync("insights/index.html", "utf8");
+  const articlePath = "insights/take-charge-of-your-ai-future/index.html";
+
+  assert.equal(existsSync(articlePath), true, "Take Charge article page is missing");
+  assert.match(insights, /href="take-charge-of-your-ai-future\/"/);
+  assert.match(insights, /3 insights shown/);
+
+  const article = readFileSync(articlePath, "utf8");
+  assert.match(article, /<h1>Your Company Won(?:'|’|&rsquo;)t Save You from the AI Revolution/);
+  assert.match(article, /Written by Barbara Salami/i);
+  assert.match(article, /process pros, not tech prodigies/i);
+  assert.match(article, /class="[^"]*\barticle-sources\b[^"]*"/);
+  assert.match(article, /href="https:\/\/onewereach\.org\/take-charge-of-your-ai-future\/"/);
+  assert.doesNotMatch(article, /href="https:\/\/onewereach\.org\/ai-academy\/"/);
+  assert.doesNotMatch(article, /The next cohort begins March 2026\./);
+  assert.doesNotMatch(article, /Sign up to join today/i);
+
+  const css = readFileSync("assets/css/site.css", "utf8");
+  assert.match(css, /\.article-sources p\s*\{[^}]*color:\s*#e2e1e6;[^}]*font-size:\s*0\.82rem;/s);
+  assert.match(css, /\.article-sources #article-sources-heading\s*\{[^}]*color:\s*var\(--white\);[^}]*font-size:\s*0\.9rem;/s);
+  const phoneRules = css.match(/@media \(max-width: 640px\) \{[\s\S]*?\n\}/)?.[0] || "";
+  assert.match(phoneRules, /\.article-header h1\s*\{[^}]*font-size:/);
+});
+
 test("About introduces both founders before the company story", () => {
   assert.equal(existsSync("about/index.html"), true, "About page is missing");
   const html = readFileSync("about/index.html", "utf8");
 
   assert.match(html, /<title>KAINDLY \| About<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/about\/">/);
-  assert.match(html, /href="\.\.\/about\/"[^>]+aria-current="page"/);
+  assert.match(html, /href="\.\.\/about\/index\.html"[^>]+aria-current="page"/);
   assert.equal((html.match(/data-founder/g) || []).length, 2);
   assert.match(html, /Barbara Salami/);
   assert.match(html, /Leanna Baker Williams/);
@@ -248,7 +383,7 @@ test("Contact exposes embedded scheduling, messaging, and assessment paths", () 
 
   assert.match(html, /<title>KAINDLY \| Schedule a Conversation<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/contact\/">/);
-  assert.match(html, /href="\.\.\/contact\/"[^>]+aria-current="page"/);
+  assert.match(html, /href="\.\.\/contact\/index\.html"[^>]+aria-current="page"/);
   assert.match(html, /class="acuity-booking-bar" style="display: none;"/);
   assert.match(html, /owner=38041134&amp;ref=booking_bar/);
   assert.match(html, /https:\/\/embed\.acuityscheduling\.com\/embed\/bar\/38041134\.js/);
@@ -260,10 +395,20 @@ test("Contact exposes embedded scheduling, messaging, and assessment paths", () 
   assert.match(html, /https:\/\/form\.typeform\.com\/to\/CLwbVZRw/);
   assert.equal((html.match(/https:\/\/embed\.typeform\.com\/next\/embed\.js/g) || []).length, 1);
   assert.match(html, /Not Sure Where You Stand\?/);
-  assert.match(html, /href="\.\.\/assessment\/"/);
+  assert.match(html, /href="\.\.\/assessment\/index\.html"/);
   assert.match(html, /target="_blank" rel="noopener noreferrer"/);
   assert.doesNotMatch(html, /<form\b/i);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
+});
+
+test("Privacy and Terms are linked from every footer", () => {
+  assert.equal(existsSync("privacy/index.html"), true);
+  assert.equal(existsSync("terms/index.html"), true);
+  for (const [file] of pageFiles) {
+    const html = readFileSync(file, "utf8");
+    assert.match(html, /Privacy Policy/);
+    assert.match(html, /Terms of Service/);
+  }
 });
 
 test("every page has complete unique metadata and accessibility landmarks", () => {
@@ -283,12 +428,15 @@ test("every page has complete unique metadata and accessibility landmarks", () =
     descriptions.add(description);
 
     assert.match(html, new RegExp(`<link rel="canonical" href="https:\\/\\/www\\.kaindly\\.ai${route.replaceAll("/", "\\/")}">`));
-    assert.match(html, new RegExp(`<meta property="og:url" content="https:\\/\\/www\\.kaindly\\.ai${route.replaceAll("/", "\\/")}">`));
-    assert.match(html, /<meta name="twitter:title" content="[^"]+">/);
-    assert.match(html, /<meta name="twitter:description" content="[^"]+">/);
-    assert.match(html, /<meta name="twitter:image" content="https:\/\/www\.kaindly\.ai\/assets\/brand\/og\.png">/);
+    const isLegalPage = file === "privacy/index.html" || file === "terms/index.html";
+    if (!isLegalPage) {
+      assert.match(html, new RegExp(`<meta property="og:url" content="https:\\/\\/www\\.kaindly\\.ai${route.replaceAll("/", "\\/")}">`));
+      assert.match(html, /<meta name="twitter:title" content="[^"]+">/);
+      assert.match(html, /<meta name="twitter:description" content="[^"]+">/);
+      assert.match(html, /<meta name="twitter:image" content="https:\/\/www\.kaindly\.ai\/assets\/brand\/og\.png">/);
+    }
     assert.equal((html.match(/<main\b/g) || []).length, 1, `${file} needs one main landmark`);
-    const expectedCurrentLinks = file === "assessment/index.html" ? 0 : 1;
+    const expectedCurrentLinks = ["assessment/index.html", "privacy/index.html", "terms/index.html"].includes(file) ? 0 : 1;
     assert.equal((html.match(/aria-current="page"/g) || []).length, expectedCurrentLinks, `${file} has an incorrect active navigation state`);
     assert.match(html, /href="#main-content"[^>]*>Skip to content<\/a>/);
 
