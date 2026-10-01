@@ -10,6 +10,7 @@ const pageFiles = [
   ["about/index.html", "/about/"],
   ["contact/index.html", "/contact/"],
   ["assessment/index.html", "/assessment/"],
+  ["McLendon/index.html", "/McLendon/"],
   ["insights/kaindly-standards/index.html", "/insights/kaindly-standards/"],
   ["insights/exclusion-inequity-ai/index.html", "/insights/exclusion-inequity-ai/"],
   ["insights/take-charge-of-your-ai-future/index.html", "/insights/take-charge-of-your-ai-future/"],
@@ -401,6 +402,61 @@ test("Contact exposes embedded scheduling, messaging, and assessment paths", () 
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
+test("McLendon workbook is hidden, interactive, and preserves the full site navigation", async () => {
+  const pagePath = "McLendon/index.html";
+  const offerUrl = "https://kaindly.circle.so/checkout/founding-member?coupon_code=2026MCLENDON";
+
+  assert.equal(existsSync(pagePath), true, "McLendon workbook page is missing");
+  const html = readFileSync(pagePath, "utf8");
+  const visibleText = html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ");
+
+  assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
+  assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/McLendon\/">/);
+  assert.match(html, /<nav[^>]+aria-label="Primary navigation"/);
+  for (const route of ["../index.html", "../collective/index.html", "../insights/index.html", "../about/index.html", "../contact/index.html"]) {
+    assert.match(html, new RegExp(`href="${route.replaceAll(".", "\\.").replaceAll("/", "\\/")}"`));
+  }
+  assert.match(visibleText, /Working Smarter From Day One/);
+  assert.match(visibleText, /Presented by Barbara Salami/);
+  assert.match(visibleText, /The McLendon Foundation/);
+  assert.match(html, /src="\.\.\/assets\/images\/barbara-salami\.jpg" alt="Barbara Salami"/);
+
+  const prompts = html.match(/<details class="workbook-prompt"[\s\S]*?<\/details>/g) || [];
+  assert.equal(prompts.length, 4, "the workbook must contain four expandable prompts");
+  for (const title of ["Build a Halftime Trivia App", "The Crisis", "The Business Decision", "The Deal"]) {
+    assert.match(visibleText, new RegExp(title));
+  }
+  assert.equal((html.match(/data-copy-prompt/g) || []).length, 4, "each prompt needs a copy action");
+  assert.equal((html.match(/data-workbook-note=/g) || []).length, 4, "each prompt needs a private notes area");
+  assert.match(html, /src="\.\.\/assets\/js\/mclendon\.js"/);
+
+  assert.match(visibleText, /Exclusive McLendon Offer: 6 Months Free/);
+  assert.match(visibleText, /2026MCLENDON/);
+  assert.match(html, new RegExp(`href="${offerUrl.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}"`));
+
+  for (const [file] of pageFiles) {
+    if (file === pagePath) continue;
+    assert.doesNotMatch(readFileSync(file, "utf8"), /href="[^"]*McLendon(?:\/|\/index\.html)"/i, `${file} must not expose the hidden workbook`);
+  }
+
+  const workbookCss = readFileSync("assets/css/mclendon.css", "utf8");
+  assert.match(workbookCss, /\.copy-status,[\s\S]*?\.note-status\s*{[^}]*color:\s*var\(--violet\);/);
+
+  const { copyWorkbookPrompt, loadWorkbookNote, saveWorkbookNote } = await import("../assets/js/mclendon.js");
+  const saved = new Map();
+  const storage = {
+    getItem(key) { return saved.has(key) ? saved.get(key) : null; },
+    setItem(key, value) { saved.set(key, value); },
+  };
+  const copied = [];
+  const clipboard = { writeText(value) { copied.push(value); return Promise.resolve(); } };
+
+  saveWorkbookNote(storage, "crisis", "Verify the facts before publishing.");
+  assert.equal(loadWorkbookNote(storage, "crisis"), "Verify the facts before publishing.");
+  await copyWorkbookPrompt(clipboard, "Full CRAFT-I prompt");
+  assert.deepEqual(copied, ["Full CRAFT-I prompt"]);
+});
+
 test("Privacy and Terms are linked from every footer", () => {
   assert.equal(existsSync("privacy/index.html"), true);
   assert.equal(existsSync("terms/index.html"), true);
@@ -436,7 +492,7 @@ test("every page has complete unique metadata and accessibility landmarks", () =
       assert.match(html, /<meta name="twitter:image" content="https:\/\/www\.kaindly\.ai\/assets\/brand\/og\.png">/);
     }
     assert.equal((html.match(/<main\b/g) || []).length, 1, `${file} needs one main landmark`);
-    const expectedCurrentLinks = ["assessment/index.html", "privacy/index.html", "terms/index.html"].includes(file) ? 0 : 1;
+    const expectedCurrentLinks = ["assessment/index.html", "McLendon/index.html", "privacy/index.html", "terms/index.html"].includes(file) ? 0 : 1;
     assert.equal((html.match(/aria-current="page"/g) || []).length, expectedCurrentLinks, `${file} has an incorrect active navigation state`);
     assert.match(html, /href="#main-content"[^>]*>Skip to content<\/a>/);
 
