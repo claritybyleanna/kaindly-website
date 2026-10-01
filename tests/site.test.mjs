@@ -419,6 +419,7 @@ test("McLendon workbook is hidden, interactive, and preserves the full site navi
   assert.match(visibleText, /Working Smarter From Day One/);
   assert.match(visibleText, /Presented by Barbara Salami/);
   assert.match(visibleText, /The McLendon Foundation/);
+  assert.match(html, /src="\.\.\/assets\/images\/barbara-salami\.jpg" alt="Barbara Salami"/);
 
   const prompts = html.match(/<details class="workbook-prompt"[\s\S]*?<\/details>/g) || [];
   assert.equal(prompts.length, 4, "the workbook must contain four expandable prompts");
@@ -435,8 +436,11 @@ test("McLendon workbook is hidden, interactive, and preserves the full site navi
 
   for (const [file] of pageFiles) {
     if (file === pagePath) continue;
-    assert.doesNotMatch(readFileSync(file, "utf8"), /McLendon\/index\.html/, `${file} must not expose the hidden workbook`);
+    assert.doesNotMatch(readFileSync(file, "utf8"), /href="[^"]*McLendon(?:\/|\/index\.html)"/i, `${file} must not expose the hidden workbook`);
   }
+
+  const workbookCss = readFileSync("assets/css/mclendon.css", "utf8");
+  assert.match(workbookCss, /\.copy-status,[\s\S]*?\.note-status\s*{[^}]*color:\s*var\(--violet\);/);
 
   const { copyWorkbookPrompt, loadWorkbookNote, saveWorkbookNote } = await import("../assets/js/mclendon.js");
   const saved = new Map();
