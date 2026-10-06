@@ -41,9 +41,8 @@ Add one protected static route, isolated presentation assets, and a small authen
 - `assets/js/blead.js` — local accordion, deep-link, and filter behavior
 - `assets/js/blead-access.js` — access-form enhancement without password or session logic
 - `lib/blead-auth.js` — shared password and signed-session helpers
-- `api/blead-auth.js` — server-side password verification and session-cookie creation
-- `api/blead-logout.js` — session-cookie removal
 - `scripts/blead-prototype-server.mjs` — local review server that applies the same access contract
+- `middleware.js` — route-specific password verification, session enforcement, and logout while preserving the existing maintenance behavior
 
 The page reuses `assets/css/site.css`, `assets/js/site.js`, and official assets in `assets/brand/`. Route-specific names avoid changing the existing site. The content module lives below `/Blead/` so it cannot be fetched without the same session check. It contains only fields that are safe for the intended audience; editorial notes and private fields do not exist in the delivered object.
 
@@ -53,7 +52,7 @@ JavaScript enhances the experience but does not own the primary content. The ren
 
 Use a branded KAINDLY password screen rather than the browser's native authentication prompt. The owner-supplied shared program password is supplied through the private `BLEAD_PASSWORD` environment variable and never committed to source or documentation. A separate `BLEAD_SESSION_SECRET` signs session cookies.
 
-Unauthenticated requests for `/Blead/` or any file below it redirect to `/Blead/access/`. The access page submits the password by `POST` to `/api/blead-auth`. The endpoint compares the submitted value server-side and, when accepted, returns a signed session cookie with these properties:
+Unauthenticated requests for `/Blead/` or any file below it redirect to `/Blead/access/`. The access page submits the password by `POST` to the same access route. Vercel middleware compares the submitted value server-side and, when accepted, returns a signed session cookie with these properties:
 
 - `HttpOnly`
 - `Secure` outside local development
@@ -61,7 +60,7 @@ Unauthenticated requests for `/Blead/` or any file below it redirect to `/Blead/
 - `Path=/Blead/`
 - Eight-hour maximum lifetime
 
-The cookie contains no password or participant data. Middleware verifies its signature and expiration before returning protected content. Invalid or expired sessions return to the access page. A small “End this session” action clears the cookie through `/api/blead-logout`.
+The cookie contains no password or participant data. Middleware verifies its signature and expiration before returning protected content. Invalid or expired sessions return to the access page. A small “End this session” form posts to `/Blead/logout/`, where middleware clears the cookie and returns to the access screen.
 
 Failed access attempts receive a generic inline error and preserve focus at the password field. The page does not disclose whether an environment variable, cookie, or account exists. The endpoint accepts only same-origin form posts, uses `Cache-Control: no-store`, and applies a small fixed failure delay. A future public deployment should add platform-level rate limiting before using this shared password for anything beyond low-sensitivity program materials.
 
