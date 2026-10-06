@@ -66,7 +66,7 @@
       <div class="blead-week-actions">
         <span class="blead-status blead-status--available">Available</span>
         <button type="button" id="week-01-control" class="blead-accordion-control" aria-expanded="true" aria-controls="week-01-panel" data-accordion-control>
-          <span>Hide details</span><span aria-hidden="true">+</span>
+          <span data-accordion-label>Hide details</span><span data-accordion-icon aria-hidden="true">+</span>
         </button>
       </div>
     </div>
@@ -81,7 +81,7 @@
       <div class="blead-week-actions">
         <span class="blead-status blead-status--overview">Overview available</span>
         <button type="button" id="week-02-control" class="blead-accordion-control" aria-expanded="false" aria-controls="week-02-panel" data-accordion-control>
-          <span>View details</span><span aria-hidden="true">+</span>
+          <span data-accordion-label>View details</span><span data-accordion-icon aria-hidden="true">+</span>
         </button>
       </div>
     </div>
@@ -95,12 +95,10 @@
       </div>
       <div class="blead-week-actions">
         <span class="blead-status blead-status--upcoming">Coming soon</span>
-        <button type="button" id="week-03-control" class="blead-accordion-control" aria-expanded="false" aria-controls="week-03-panel" data-accordion-control>
-          <span>View details</span><span aria-hidden="true">+</span>
-        </button>
+        
       </div>
     </div>
-    <div id="week-03-panel" class="blead-accordion-panel" aria-labelledby="week-03-control" data-accordion-panel></div>
+    
   </article></div>
       </div>
     </section>
@@ -153,5 +151,6 @@
 
   <footer class="blead-footer"><div class="blead-shell blead-footer-grid"><div><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY"><p>Leadership Learning Hub</p></div><nav aria-label="Policies"><a href="/privacy/">Privacy Policy</a><a href="/terms/">Terms of Service</a></nav><a href="#top">Back to top ↑</a></div></footer>
   <script src="/assets/js/site.js" defer></script>
+  <script type="module" src="/assets/js/blead.js"></script>
 </body>
 </html>

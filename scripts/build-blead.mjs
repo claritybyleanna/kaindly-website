@@ -102,6 +102,12 @@ function renderWeek(week, resources) {
     panelParts.push(`<p class="blead-next-week"><a href="#${escapeHtml(week.nextWeekId)}">Continue to the next sample week</a></p>`);
   }
 
+  const hasDetails = panelParts.length > 0;
+  const disclosure = hasDetails ? `<button type="button" id="${escapeHtml(week.id)}-control" class="blead-accordion-control" aria-expanded="${isOpen}" aria-controls="${escapeHtml(week.id)}-panel" data-accordion-control>
+          <span data-accordion-label>${isOpen ? "Hide details" : "View details"}</span><span data-accordion-icon aria-hidden="true">+</span>
+        </button>` : "";
+  const panel = hasDetails ? `<div id="${escapeHtml(week.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(week.id)}-control" data-accordion-panel>${panelParts.join("")}</div>` : "";
+
   return `<article class="blead-week" id="${escapeHtml(week.id)}" data-week data-state="${escapeHtml(week.state)}">
     <div class="blead-week-summary">
       <div class="blead-week-copy">
@@ -111,12 +117,10 @@ function renderWeek(week, resources) {
       </div>
       <div class="blead-week-actions">
         <span class="blead-status blead-status--${escapeHtml(week.state)}">${escapeHtml(stateLabels[week.state])}</span>
-        <button type="button" id="${escapeHtml(week.id)}-control" class="blead-accordion-control" aria-expanded="${isOpen}" aria-controls="${escapeHtml(week.id)}-panel" data-accordion-control>
-          <span>${isOpen ? "Hide details" : "View details"}</span><span aria-hidden="true">+</span>
-        </button>
+        ${disclosure}
       </div>
     </div>
-    <div id="${escapeHtml(week.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(week.id)}-control" data-accordion-panel>${panelParts.join("")}</div>
+    ${panel}
   </article>`;
 }
 
@@ -209,6 +213,7 @@ export function renderBleadPage(content) {
 
   <footer class="blead-footer"><div class="blead-shell blead-footer-grid"><div><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY"><p>Leadership Learning Hub</p></div><nav aria-label="Policies">${site.policyLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join("")}</nav><a href="#top">Back to top ↑</a></div></footer>
   <script src="/assets/js/site.js" defer></script>
+  <script type="module" src="/assets/js/blead.js"></script>
 </body>
 </html>
 `;

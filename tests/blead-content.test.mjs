@@ -70,3 +70,70 @@ test("the committed Blead page matches a deterministic build", async () => {
 
   assert.equal(committed, renderBleadPage(bleadContent));
 });
+
+test("Blead interactions keep disclosures, deep links, and filters accessible", async () => {
+  const {
+    openDeepLinkedWeek,
+    resourceMatches,
+    setDisclosure,
+  } = await import("../assets/js/blead.js");
+
+  const panel = { hidden: true };
+  const label = { textContent: "View details" };
+  const button = {
+    attributes: new Map([
+      ["aria-controls", "week-02-panel"],
+      ["aria-expanded", "false"],
+    ]),
+    getAttribute(name) { return this.attributes.get(name); },
+    setAttribute(name, value) { this.attributes.set(name, value); },
+    querySelector(selector) { return selector === "[data-accordion-label]" ? label : null; },
+    ownerDocument: { getElementById: (id) => id === "week-02-panel" ? panel : null },
+  };
+
+  setDisclosure(button, true);
+  assert.equal(button.getAttribute("aria-expanded"), "true");
+  assert.equal(panel.hidden, false);
+  assert.equal(label.textContent, "Hide details");
+  setDisclosure(button, false);
+  assert.equal(button.getAttribute("aria-expanded"), "false");
+  assert.equal(panel.hidden, true);
+
+  const deepPanel = { hidden: true };
+  let scrolled = false;
+  const deepButton = {
+    getAttribute: (name) => name === "aria-controls" ? "week-03-panel" : "false",
+    setAttribute() {},
+    querySelector() { return null; },
+    ownerDocument: { getElementById: () => deepPanel },
+  };
+  const week = {
+    querySelector: () => deepButton,
+    scrollIntoView: () => { scrolled = true; },
+  };
+  const root = { getElementById: (id) => id === "week-03" ? week : null };
+  assert.equal(openDeepLinkedWeek("#week-03", root), true);
+  assert.equal(deepPanel.hidden, false);
+  assert.equal(scrolled, true);
+  assert.equal(openDeepLinkedWeek("#week-03<script>", root), false);
+  assert.equal(openDeepLinkedWeek("#help", root), false);
+
+  const resource = {
+    dataset: { resourceState: "available", resourceType: "guide" },
+    textContent: "Learning guide Key ideas and reflection prompts",
+  };
+  assert.equal(resourceMatches(resource, "", "all"), true);
+  assert.equal(resourceMatches(resource, "reflection", "guide"), true);
+  assert.equal(resourceMatches(resource, "slides", "guide"), false);
+  assert.equal(resourceMatches(resource, "learning", "gui"), false);
+
+  const html = await readFile(new URL("../Blead/index.html", import.meta.url), "utf8");
+  assert.match(html, /<script type="module" src="\/assets\/js\/blead\.js"/);
+  assert.match(html, /aria-live="polite"[^>]+data-result-count/);
+  assert.match(html, /data-clear-filter/);
+
+  const ids = new Set([...html.matchAll(/\bid="([^"]+)"/g)].map(([, id]) => id));
+  const controlledIds = [...html.matchAll(/\baria-controls="([^"]+)"/g)].map(([, id]) => id);
+  assert.ok(controlledIds.length >= 8);
+  assert.ok(controlledIds.every((id) => ids.has(id)));
+});
