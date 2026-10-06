@@ -115,7 +115,7 @@ function initializeFilters(documentRoot) {
     buttons.forEach((button) => {
       button.setAttribute("aria-pressed", String(button.dataset.filter === type));
     });
-    count.textContent = `${visible} sample resource${visible === 1 ? "" : "s"} shown`;
+    count.textContent = `${visible} material${visible === 1 ? "" : "s"} shown`;
     if (empty) empty.hidden = visible !== 0;
   };
 

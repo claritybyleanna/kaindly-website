@@ -29,6 +29,18 @@
   outline-offset: 4px;
 }
 
+.blead-page .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  margin: -1px;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
 .blead-shell {
   width: min(1160px, calc(100% - 48px));
   margin-inline: auto;
@@ -635,16 +647,24 @@
   font-weight: 700;
 }
 
-.blead-resource-demo {
-  display: block;
+.blead-resource-download {
+  display: inline-flex;
   min-height: 44px;
+  align-items: center;
+  justify-content: center;
   margin-top: 18px;
   padding: 10px 14px;
-  border: 1px solid var(--blead-border);
+  border: 1px solid var(--blead-violet);
   border-radius: var(--blead-radius);
-  background: var(--blead-periwinkle-pale);
-  color: var(--blead-muted);
-  cursor: not-allowed;
+  background: var(--blead-violet);
+  color: var(--blead-surface);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.blead-resource-download:hover {
+  border-color: var(--blead-violet-deep);
+  background: var(--blead-violet-deep);
 }
 
 .blead-empty-state {

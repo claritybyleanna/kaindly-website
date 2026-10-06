@@ -3,17 +3,18 @@ import { fileURLToPath } from "node:url";
 import { bleadContent } from "../Blead/content.js";
 
 const stateLabels = {
-  available: "Available",
+  available: "Assessment open",
+  scheduled: "Scheduled",
   overview: "Overview available",
   upcoming: "Coming soon",
 };
 
 const resourceLabels = {
-  available: "Available for review",
+  available: "Available to download",
   upcoming: "Coming soon",
   unavailable: "Temporarily unavailable",
-  external: "External authorized resource",
 };
+const approvedAssessmentUrl = "https://diagnostic.kaindly.ai";
 const approvedSectionFragments = new Set([
   "#overview",
   "#program-plan",
@@ -48,6 +49,23 @@ function assertApprovedSameSitePath(value, field) {
   }
 }
 
+function assertApprovedAssessmentUrl(value, field) {
+  if (value !== approvedAssessmentUrl) {
+    throw new Error(`${field} must use the approved assessment destination`);
+  }
+}
+
+function assertApprovedDownloadPath(value, field) {
+  if (!/^\/Blead\/materials\/[a-z0-9][a-z0-9._-]*\.(?:pdf|pptx|docx|xlsx|zip)$/iu.test(value)) {
+    throw new Error(`${field} must use an approved same-site download path`);
+  }
+}
+
+function assertApprovedEngagementDestination(value, field) {
+  if (value === approvedAssessmentUrl) return;
+  assertApprovedFragment(value, field);
+}
+
 export function validatePublicContent(content) {
   if (content?.site?.intendedPath !== "/Blead/") {
     throw new Error("The protected route must preserve the exact /Blead/ casing");
@@ -55,18 +73,21 @@ export function validatePublicContent(content) {
   if (!Array.isArray(content.weeks) || !Array.isArray(content.resources)) {
     throw new Error("Weeks and resources are required");
   }
-  if (!content.weeks.every((week) => week.sample === true)) {
-    throw new Error("Every prototype week must be labeled as sample content");
+  if (!content.weeks.every((week) => week.sample === false)) {
+    throw new Error("Every engagement stage must be marked as participant-facing content");
   }
-  if (!content.resources.every((resource) => resource.sample === true)) {
-    throw new Error("Every prototype resource must be labeled as sample content");
+  if (!content.resources.every((resource) => resource.sample === false)) {
+    throw new Error("Every engagement resource must be marked as participant-facing content");
   }
   for (const resource of content.resources) {
     if (!/^resource-[a-z0-9-]+$/u.test(resource.id) || !approvedResourceStates.has(resource.availability)) {
       throw new Error("Resource IDs and states must use approved values");
     }
-    if (resource.publicUrl !== null) {
-      throw new Error("Prototype resources cannot include a live destination");
+    if (resource.availability === "available") {
+      if (!resource.publicUrl) throw new Error("An available material requires an approved download");
+      assertApprovedDownloadPath(resource.publicUrl, "Material destination");
+    } else if (resource.publicUrl !== null) {
+      throw new Error("Only available materials can include a download destination");
     }
   }
   const weekIds = new Set(content.weeks.map(({ id }) => id));
@@ -79,17 +100,17 @@ export function validatePublicContent(content) {
       throw new Error("Week resources must reference known resource IDs");
     }
   }
-  assertApprovedFragment(content.site.nextStep.destination, "Next-step destination");
+  assertApprovedAssessmentUrl(content.site.assessment.href, "Assessment destination");
   for (const update of content.updates) {
-    assertApprovedFragment(update.destination, "Update destination");
+    assertApprovedEngagementDestination(update.destination, "Update destination");
   }
   for (const link of content.site.policyLinks) {
     assertApprovedSameSitePath(link.href, "Policy destination");
   }
 
   const serialized = JSON.stringify(content);
-  if (/@|202[0-9]|participant name|assessment result/i.test(serialized)) {
-    throw new Error("Content contains information that is not public-safe");
+  if (/@|Cosimo|Stephanie|Barbara|Leanna|participant name|assessment result|DocuSign|Scope of Work|\bSOW\b|\$|90,000/i.test(serialized)) {
+    throw new Error("Content contains restricted contract or participant information");
   }
   if (/privateUrl|publicationApproval|editorialNotes|reviewNotes/i.test(serialized)) {
     throw new Error("Editorial or private fields cannot enter the public model");
@@ -132,7 +153,7 @@ function renderWeek(week, resources) {
     panelParts.push(`<section class="blead-week-detail"><h4>Materials</h4>${related.map((resource) => `<div class="blead-inline-resource"><strong>${escapeHtml(resource.title)}</strong><span>${escapeHtml(resourceLabels[resource.availability])}</span></div>`).join("")}</section>`);
   }
   if (week.nextWeekId) {
-    panelParts.push(`<p class="blead-next-week"><a href="#${escapeHtml(week.nextWeekId)}">Continue to the next sample week</a></p>`);
+    panelParts.push(`<p class="blead-next-week"><a href="#${escapeHtml(week.nextWeekId)}">Continue to the next stage</a></p>`);
   }
 
   const hasDetails = panelParts.length > 0;
@@ -144,31 +165,28 @@ function renderWeek(week, resources) {
   return `<article class="blead-week" id="${escapeHtml(week.id)}" data-week data-state="${escapeHtml(week.state)}">
     <div class="blead-week-summary">
       <div class="blead-week-copy">
-        <span class="blead-week-label">${escapeHtml(week.label)} · Sample</span>
+        <span class="blead-week-label">${escapeHtml(week.label)}</span>
         <h3 id="${escapeHtml(week.id)}-heading">${escapeHtml(week.title)}</h3>
         <p>${escapeHtml(week.summary)}</p>
       </div>
       <div class="blead-week-actions">
-        <span class="blead-status blead-status--${escapeHtml(week.state)}">${escapeHtml(stateLabels[week.state])}</span>
+        <span class="blead-status blead-status--${escapeHtml(week.state)}">${escapeHtml(week.statusLabel || stateLabels[week.state])}</span>
 ${disclosure ? `        ${disclosure}\n` : ""}      </div>
     </div>
 ${panel ? `    ${panel}\n` : ""}  </article>`;
 }
 
 function renderResource(resource) {
-  const accessNote = resource.accessNote
-    ? `    <p class="blead-access-note">${escapeHtml(resource.accessNote)}</p>\n`
-    : "";
-  const demoAction = resource.availability === "external"
-    ? `    <button class="blead-resource-demo" type="button" disabled aria-disabled="true">Open recording</button>\n`
+  const downloadAction = resource.publicUrl
+    ? `    <a class="blead-resource-download" href="${escapeHtml(resource.publicUrl)}" download>Download material</a>\n`
     : "";
 
   return `<article class="blead-resource" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
-    <span class="blead-resource-type">${escapeHtml(resource.type)} · Sample</span>
+    <span class="blead-resource-type">${escapeHtml(resource.type)}</span>
     <h3>${escapeHtml(resource.title)}</h3>
     <p>${escapeHtml(resource.description)}</p>
-${accessNote}    <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
-${demoAction}  </article>`;
+    <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
+${downloadAction}  </article>`;
 }
 
 function renderFaq(faq) {
@@ -176,6 +194,14 @@ function renderFaq(faq) {
     <h3><span id="${escapeHtml(faq.id)}-heading">${escapeHtml(faq.question)}</span><button class="blead-faq-control blead-enhanced-control" type="button" id="${escapeHtml(faq.id)}-control" aria-label="Toggle answer: ${escapeHtml(faq.question)}" aria-expanded="false" aria-controls="${escapeHtml(faq.id)}-panel" data-accordion-control><span data-accordion-icon aria-hidden="true">+</span></button></h3>
     <div id="${escapeHtml(faq.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(faq.id)}-heading" data-accordion-panel><p>${escapeHtml(faq.answer)}</p></div>
   </article>`;
+}
+
+function renderEngagementLink(destination, label, { showArrow = false } = {}) {
+  const external = destination === approvedAssessmentUrl;
+  const attributes = external ? ' target="_blank" rel="noopener noreferrer"' : "";
+  const arrow = showArrow ? ' <span aria-hidden="true">→</span>' : "";
+  const newTabNote = external ? '<span class="sr-only"> (opens in a new tab)</span>' : "";
+  return `<a href="${escapeHtml(destination)}"${attributes}>${escapeHtml(label)}${arrow}${newTabNote}</a>`;
 }
 
 export function renderBleadPage(content) {
@@ -188,8 +214,8 @@ export function renderBleadPage(content) {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Leadership Learning Hub Prototype | KAINDLY</title>
-  <meta name="description" content="A public-safe design review of the KAINDLY Leadership Learning Hub experience.">
+  <title>Bracco AI Leadership Accelerator | KAINDLY</title>
+  <meta name="description" content="The protected Bracco AI Leadership Accelerator program hub.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/assets/brand/icon-violet.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/site.css">
@@ -199,7 +225,7 @@ export function renderBleadPage(content) {
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="blead-header" data-site-header>
     <div class="blead-shell blead-header-inner">
-      <a class="blead-brand" href="/Blead/" aria-label="KAINDLY Leadership Learning Hub home"><img src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY"></a>
+      <a class="blead-brand" href="/Blead/" aria-label="Bracco AI Leadership Accelerator home"><img src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY"></a>
       <button class="blead-menu-button" type="button" aria-expanded="false" aria-controls="blead-navigation" data-menu-button><span>Menu</span><span aria-hidden="true">☰</span></button>
       <nav id="blead-navigation" class="blead-navigation" aria-label="Learning hub" data-menu>${nav}</nav>
       <form class="blead-logout" method="post" action="/Blead/logout/"><button type="submit">End session</button></form>
@@ -216,10 +242,10 @@ export function renderBleadPage(content) {
           <p class="blead-supporting-line">${escapeHtml(site.supportingLine)}</p>
         </div>
         <aside class="blead-next-step" aria-labelledby="next-step-title">
-          <p class="blead-kicker">${escapeHtml(site.nextStep.label)}</p>
-          <h2 id="next-step-title">${escapeHtml(site.nextStep.title)}</h2>
-          <p>${escapeHtml(site.nextStep.description)}</p>
-          <a href="${escapeHtml(site.nextStep.destination)}">${escapeHtml(site.nextStep.actionLabel)} <span aria-hidden="true">→</span></a>
+          <p class="blead-kicker">${escapeHtml(site.assessment.label)}</p>
+          <h2 id="next-step-title">${escapeHtml(site.assessment.title)}</h2>
+          <p>${escapeHtml(site.assessment.description)}</p>
+          ${renderEngagementLink(site.assessment.href, site.assessment.actionLabel, { showArrow: true })}
         </aside>
       </div>
     </section>
@@ -227,7 +253,7 @@ export function renderBleadPage(content) {
     <section class="blead-section" id="overview" aria-labelledby="overview-title">
       <div class="blead-shell">
         <p class="blead-kicker">Program overview</p>
-        <h2 id="overview-title">A clear place to learn, reflect, and apply</h2>
+        <h2 id="overview-title">One connected leadership experience</h2>
         <p class="blead-section-intro">${escapeHtml(site.overview)}</p>
         <div class="blead-theme-grid">${content.themes.map((theme) => `<article><span aria-hidden="true">0${content.themes.indexOf(theme) + 1}</span><h3>${escapeHtml(theme.title)}</h3><p>${escapeHtml(theme.body)}</p></article>`).join("")}</div>
         <div class="blead-how-to" id="how-to-use"><div><p class="blead-kicker">How to use this hub</p><h3>Four simple steps</h3></div><ol>${content.usageSteps.map((step) => `<li><span>${content.usageSteps.indexOf(step) + 1}</span>${escapeHtml(step)}</li>`).join("")}</ol></div>
@@ -236,20 +262,19 @@ export function renderBleadPage(content) {
 
     <section class="blead-section blead-section--tinted" id="program-plan" aria-labelledby="program-plan-title">
       <div class="blead-shell blead-plan-layout">
-        <div class="blead-section-heading"><div><p class="blead-kicker">Program plan</p><h2 id="program-plan-title">Explore the weekly outline</h2></div><p>Open a sample week to see how the future learning plan can organize approved information and materials.</p></div>
-        <div class="blead-sample-notice" role="note"><strong>Sample content for design review</strong><span>These fictional examples demonstrate layout and content states. They are not an approved schedule or curriculum.</span></div>
+        <div class="blead-section-heading"><div><p class="blead-kicker">Program plan</p><h2 id="program-plan-title">Your engagement plan</h2></div><p>Open each stage to review its focus, preparation, and approved materials.</p></div>
         <div class="blead-week-list">${content.weeks.map((week) => renderWeek(week, content.resources)).join("")}</div>
       </div>
     </section>
 
-    ${site.enabledModules.materials ? `<section class="blead-section" id="materials" aria-labelledby="materials-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Prototype component examples</p><h2 id="materials-title">Sample material states</h2></div><p>This review-only area shows how different availability states could appear. Its actions are intentionally inactive.</p></div><div class="blead-filter" aria-label="Filter sample materials"><span>Show:</span><button type="button" aria-pressed="true" data-filter="all">All</button><button type="button" aria-pressed="false" data-filter="available">Available</button><button type="button" aria-pressed="false" data-filter="upcoming">Coming soon</button><button type="button" aria-pressed="false" data-filter="other">Other states</button><button class="blead-clear-filter" type="button" data-clear-filter>Clear filters</button><span class="blead-result-count" aria-live="polite" data-result-count>${content.resources.length} sample materials</span></div><div class="blead-resource-grid">${content.resources.map(renderResource).join("")}</div><div class="blead-empty-state" data-empty-state hidden><h3>No matching materials</h3><p>Try another filter or clear your filters.</p></div></div></section>` : ""}
+    ${site.enabledModules.materials ? `<section class="blead-section" id="materials" aria-labelledby="materials-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Program materials</p><h2 id="materials-title">Downloadable resources</h2></div><p>Approved preparation, session, and follow-up materials will become downloadable here as the engagement progresses.</p></div><div class="blead-filter" aria-label="Filter program materials"><span>Show:</span><button type="button" aria-pressed="true" data-filter="all">All</button><button type="button" aria-pressed="false" data-filter="available">Available</button><button type="button" aria-pressed="false" data-filter="upcoming">Coming soon</button><button type="button" aria-pressed="false" data-filter="other">Other states</button><button class="blead-clear-filter" type="button" data-clear-filter>Clear filters</button><span class="blead-result-count" aria-live="polite" data-result-count>${content.resources.length} materials</span></div><div class="blead-resource-grid">${content.resources.map(renderResource).join("")}</div><div class="blead-empty-state" data-empty-state hidden><h3>No matching materials</h3><p>Try another filter or clear your filters.</p></div></div></section>` : ""}
 
-    ${site.enabledModules.updates ? `<section class="blead-section blead-section--honey" id="updates" aria-labelledby="updates-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Program updates</p><h2 id="updates-title">A place for approved changes</h2></div><p>Updates appear here only when there is useful, approved information to share.</p></div>${content.updates.map((update) => `<article class="blead-update"><span>Sample update</span><div><h3>${escapeHtml(update.title)}</h3><p>${escapeHtml(update.body)}</p></div><a href="${escapeHtml(update.destination)}">${escapeHtml(update.actionLabel)}</a></article>`).join("")}<div class="blead-empty-example"><strong>When there is no update</strong><p>This section can be removed until useful information is ready.</p></div></div></section>` : ""}
+    ${site.enabledModules.updates ? `<section class="blead-section blead-section--honey" id="updates" aria-labelledby="updates-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Program updates</p><h2 id="updates-title">What needs your attention</h2></div><p>Approved updates and reminders will appear here as the engagement progresses.</p></div>${content.updates.map((update) => `<article class="blead-update"><span>Action needed</span><div><h3>${escapeHtml(update.title)}</h3><p>${escapeHtml(update.body)}</p></div>${renderEngagementLink(update.destination, update.actionLabel)}</article>`).join("")}</div></section>` : ""}
 
     ${site.enabledModules.help ? `<section class="blead-section" id="help" aria-labelledby="help-title"><div class="blead-shell blead-help-layout"><div><p class="blead-kicker">Help and FAQ</p><h2 id="help-title">Questions about the hub</h2><p class="blead-section-intro">Find guidance about where to begin, materials, access, and support.</p></div><div class="blead-faq-list">${content.faqs.map(renderFaq).join("")}</div></div></section>` : ""}
   </main>
 
-  <footer class="blead-footer"><div class="blead-shell blead-footer-grid"><div><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY"><p>Leadership Learning Hub</p></div><nav aria-label="Policies">${site.policyLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join("")}</nav><a href="#top">Back to top ↑</a></div></footer>
+  <footer class="blead-footer"><div class="blead-shell blead-footer-grid"><div><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY"><p>Bracco AI Leadership Accelerator</p></div><nav aria-label="Policies">${site.policyLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join("")}</nav><a href="#top">Back to top ↑</a></div></footer>
   <script type="module" src="/assets/js/site.js"></script>
   <script type="module" src="/assets/js/blead.js"></script>
 </body>

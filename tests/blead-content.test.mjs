@@ -4,26 +4,39 @@ import test from "node:test";
 
 const root = new URL("../", import.meta.url);
 
-test("sample content is public-safe and explicitly labeled", async () => {
+test("Bracco engagement content is role-based and limited to approved program facts", async () => {
   const { bleadContent } = await import("../Blead/content.js");
 
-  assert.equal(bleadContent.site.title, "Leadership Learning Hub");
+  assert.equal(bleadContent.site.title, "AI Leadership Accelerator");
+  assert.equal(bleadContent.site.descriptor, "BRACCO");
   assert.equal(bleadContent.site.intendedPath, "/Blead/");
+  assert.deepEqual(bleadContent.site.assessment, {
+    label: "Before Session 1",
+    title: "Complete your AI Readiness Assessment",
+    description: "Each participant should complete the assessment before the first cohort session on October 7, 2026.",
+    actionLabel: "Take the AI Readiness Assessment",
+    href: "https://diagnostic.kaindly.ai",
+  });
   assert.deepEqual(
     bleadContent.weeks.map(({ state }) => state),
-    ["available", "overview", "upcoming"],
+    ["available", "scheduled", "upcoming", "upcoming", "upcoming", "upcoming"],
   );
-  assert.ok(bleadContent.weeks.every(({ sample }) => sample === true));
-  assert.ok(
-    bleadContent.resources.every(
-      ({ sample, publicUrl }) => sample === true && publicUrl === null,
-    ),
-  );
+  assert.deepEqual(bleadContent.weeks.map(({ title }) => title), [
+    "Kickoff, readiness, and discovery",
+    "Personal AI proficiency",
+    "Team workflows and enablement",
+    "Evaluation and judgment",
+    "Stewardship and leadership",
+    "Leadership closeout",
+  ]);
+  assert.ok(bleadContent.weeks.every(({ sample }) => sample === false));
+  assert.ok(bleadContent.resources.every(({ sample, publicUrl }) => sample === false && publicUrl === null));
+  assert.equal(bleadContent.resources.some(({ type, title }) => /recording/i.test(`${type} ${title}`)), false);
 
   const serialized = JSON.stringify(bleadContent);
   assert.doesNotMatch(
     serialized,
-    /@|202[0-9]|client|participant name|assessment result/i,
+    /@|Cosimo|Stephanie|Barbara|Leanna|participant name|assessment result|DocuSign|Scope of Work|\bSOW\b|\$|90,000/i,
   );
   assert.doesNotMatch(
     serialized,
@@ -35,9 +48,14 @@ test("Blead generator rejects hostile or malformed destinations", async () => {
   const { bleadContent } = await import("../Blead/content.js");
   const { renderBleadPage } = await import("../scripts/build-blead.mjs");
 
-  const protocolRelative = structuredClone(bleadContent);
-  protocolRelative.site.nextStep.destination = "//attacker.example";
-  assert.throws(() => renderBleadPage(protocolRelative), /approved fragment/);
+  const hostileAssessment = structuredClone(bleadContent);
+  hostileAssessment.site.assessment.href = "https://attacker.example/assessment";
+  assert.throws(() => renderBleadPage(hostileAssessment), /approved assessment/);
+
+  const hostileDownload = structuredClone(bleadContent);
+  hostileDownload.resources[0].availability = "available";
+  hostileDownload.resources[0].publicUrl = "https://attacker.example/material.pdf";
+  assert.throws(() => renderBleadPage(hostileDownload), /same-site download/);
 
   const scriptedPolicy = structuredClone(bleadContent);
   scriptedPolicy.site.policyLinks[0].href = "javascript:alert(1)";
@@ -46,6 +64,21 @@ test("Blead generator rejects hostile or malformed destinations", async () => {
   const unknownFragment = structuredClone(bleadContent);
   unknownFragment.updates[0].destination = "#not-a-section";
   assert.throws(() => renderBleadPage(unknownFragment), /approved fragment/);
+});
+
+test("approved same-site materials render as real downloads only when available", async () => {
+  const { bleadContent } = await import("../Blead/content.js");
+  const { renderBleadPage } = await import("../scripts/build-blead.mjs");
+
+  const downloadable = structuredClone(bleadContent);
+  downloadable.resources[0].availability = "available";
+  downloadable.resources[0].publicUrl = "/Blead/materials/program-overview.pdf";
+  const html = renderBleadPage(downloadable);
+  assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/materials\/program-overview\.pdf"[^>]+download[^>]*>Download material<\/a>/);
+
+  const missingFile = structuredClone(downloadable);
+  missingFile.resources[0].publicUrl = null;
+  assert.throws(() => renderBleadPage(missingFile), /available material requires an approved download/);
 });
 
 test("generated hub is semantic, accessible, and review-safe", async () => {
@@ -57,9 +90,12 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   for (const id of ["overview", "program-plan", "materials", "updates", "help"]) {
     assert.match(html, new RegExp(`<section[^>]+id="${id}"`));
   }
-  assert.match(html, /Sample content for design review/);
-  assert.match(html, />Available</);
-  assert.match(html, />Overview available</);
+  assert.match(html, /BRACCO/);
+  assert.match(html, /AI Leadership Accelerator/);
+  assert.match(html, /October 7, 2026/);
+  assert.match(html, /href="https:\/\/diagnostic\.kaindly\.ai"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
+  assert.match(html, />Assessment open</);
+  assert.match(html, />October 7, 2026</);
   assert.match(html, />Coming soon</);
   assert.match(html, /aria-expanded="true"[^>]+aria-controls="week-01-panel"/);
   assert.match(html, /id="week-01-panel"[^>]+aria-labelledby="week-01-heading"/);
@@ -67,7 +103,6 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.match(html, /class="blead-accordion-control blead-enhanced-control"/);
   assert.match(html, /class="blead-faq-control blead-enhanced-control"/);
   assert.match(html, /data-accordion-icon aria-hidden="true">\+</);
-  assert.match(html, /data-resource-state="external"[\s\S]*?<button[^>]+disabled[^>]*>Open recording<\/button>/);
   assert.match(html, /href="\/privacy\/"/);
   assert.match(html, /href="\/terms\/"/);
   assert.match(html, /action="\/Blead\/logout\/"/);
@@ -80,7 +115,7 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.doesNotMatch(html, /<a\b[^>]+data-resource-state="(?:upcoming|unavailable|external)"/);
   assert.doesNotMatch(
     html,
-    /rel="canonical"|newsletter|typeform|acuity|<iframe|analytics|marketing|TODO|TBD/i,
+    /Sample content|Prototype component|Session recording|Open recording|rel="canonical"|newsletter|typeform|acuity|<iframe|analytics|marketing|TODO|TBD/i,
   );
 });
 

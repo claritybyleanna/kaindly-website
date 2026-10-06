@@ -44,7 +44,7 @@ test("official web brand assets are available at stable paths", () => {
   }
 });
 
-test("Blead public bundle contains only protected public-safe review content", () => {
+test("Blead protected bundle contains only approved role-based engagement content", () => {
   const routeFiles = [
     ...filesBelow("Blead"),
     "assets/css/blead.css",
@@ -73,7 +73,7 @@ test("Blead public bundle contains only protected public-safe review content", (
     }
     assert.doesNotMatch(source, /BLEAD_PASSWORD\s*=/i, `${file} contains password configuration`);
     assert.doesNotMatch(source, /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i, `${file} contains an email address`);
-    assert.doesNotMatch(source, /\b20\d{2}\b/, `${file} contains a date or year`);
+    assert.doesNotMatch(source, /Cosimo|Stephanie|Barbara|Leanna|DocuSign|Scope of Work|\bSOW\b|\$\s*90,?000/i, `${file} contains restricted contract or participant details`);
     assert.doesNotMatch(source, /(?:file|ftp|smb):\/\//i, `${file} contains a private URL scheme`);
     assert.doesNotMatch(source, /(?:meeting[ _-]?id|access[ _-]?token|bearer\s+[a-z0-9._-]+)/i, `${file} contains a meeting or access credential`);
     assert.doesNotMatch(source, /This Markdown is the design input|Claude Design|source brief/i, `${file} copies editorial source material`);
@@ -81,6 +81,10 @@ test("Blead public bundle contains only protected public-safe review content", (
     assert.doesNotMatch(source, /google-analytics|googletagmanager|segment\.com|mixpanel|marketing pixel|newsletter|beehiiv/i, `${file} contains tracking or capture code`);
     assert.doesNotMatch(source, /href=["']#["']/i, `${file} contains a fake link`);
   }
+
+  const hubHtml = readFileSync("Blead/index.html", "utf8");
+  const externalLinks = [...hubHtml.matchAll(/href="(https?:\/\/[^"#]+)"/gi)].map(([, href]) => href);
+  assert.deepEqual([...new Set(externalLinks)], ["https://diagnostic.kaindly.ai"]);
 
   for (const htmlFile of ["Blead/index.html", "Blead/access/index.html"]) {
     const html = readFileSync(htmlFile, "utf8");
