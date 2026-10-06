@@ -156,12 +156,13 @@ export function renderBleadPage(content) {
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/assets/brand/icon-violet.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/site.css">
+  <link rel="stylesheet" href="/assets/css/blead.css">
 </head>
 <body class="blead-page" id="top">
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="blead-header" data-site-header>
     <div class="blead-shell blead-header-inner">
-      <a class="blead-brand" href="/Blead/" aria-label="KAINDLY Leadership Learning Hub home"><img src="/assets/brand/logo-primary-violet.svg" alt="KAINDLY"></a>
+      <a class="blead-brand" href="/Blead/" aria-label="KAINDLY Leadership Learning Hub home"><img src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY"></a>
       <button class="blead-menu-button" type="button" aria-expanded="false" aria-controls="blead-navigation" data-menu-button><span>Menu</span><span aria-hidden="true">☰</span></button>
       <nav id="blead-navigation" class="blead-navigation" aria-label="Learning hub" data-menu>${nav}</nav>
       <form class="blead-logout" method="post" action="/Blead/logout/"><button type="submit">End session</button></form>
@@ -204,7 +205,7 @@ export function renderBleadPage(content) {
       </div>
     </section>
 
-    ${site.enabledModules.materials ? `<section class="blead-section" id="materials" aria-labelledby="materials-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Prototype component examples</p><h2 id="materials-title">Sample material states</h2></div><p>This review-only area shows how different availability states could appear. Its actions are intentionally inactive.</p></div><div class="blead-filter" aria-label="Filter sample materials"><span>Show:</span><button type="button" aria-pressed="true" data-filter="all">All</button><button type="button" aria-pressed="false" data-filter="available">Available</button><button type="button" aria-pressed="false" data-filter="upcoming">Coming soon</button><button type="button" aria-pressed="false" data-filter="other">Other states</button><span class="blead-result-count" aria-live="polite" data-result-count>${content.resources.length} sample materials</span></div><div class="blead-resource-grid">${content.resources.map(renderResource).join("")}</div><div class="blead-empty-state" data-empty-state hidden><h3>No matching materials</h3><p>Try another filter or clear your filters.</p><button type="button" data-clear-filter>Clear filters</button></div></div></section>` : ""}
+    ${site.enabledModules.materials ? `<section class="blead-section" id="materials" aria-labelledby="materials-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Prototype component examples</p><h2 id="materials-title">Sample material states</h2></div><p>This review-only area shows how different availability states could appear. Its actions are intentionally inactive.</p></div><div class="blead-filter" aria-label="Filter sample materials"><span>Show:</span><button type="button" aria-pressed="true" data-filter="all">All</button><button type="button" aria-pressed="false" data-filter="available">Available</button><button type="button" aria-pressed="false" data-filter="upcoming">Coming soon</button><button type="button" aria-pressed="false" data-filter="other">Other states</button><button class="blead-clear-filter" type="button" data-clear-filter>Clear filters</button><span class="blead-result-count" aria-live="polite" data-result-count>${content.resources.length} sample materials</span></div><div class="blead-resource-grid">${content.resources.map(renderResource).join("")}</div><div class="blead-empty-state" data-empty-state hidden><h3>No matching materials</h3><p>Try another filter or clear your filters.</p></div></div></section>` : ""}
 
     ${site.enabledModules.updates ? `<section class="blead-section blead-section--honey" id="updates" aria-labelledby="updates-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Program updates</p><h2 id="updates-title">A place for approved changes</h2></div><p>Updates appear here only when there is useful, approved information to share.</p></div>${content.updates.map((update) => `<article class="blead-update"><span>Sample update</span><div><h3>${escapeHtml(update.title)}</h3><p>${escapeHtml(update.body)}</p></div><a href="${escapeHtml(update.destination)}">${escapeHtml(update.actionLabel)}</a></article>`).join("")}<div class="blead-empty-example"><strong>When there is no update</strong><p>This section can be removed until useful information is ready.</p></div></div></section>` : ""}
 
@@ -212,7 +213,7 @@ export function renderBleadPage(content) {
   </main>
 
   <footer class="blead-footer"><div class="blead-shell blead-footer-grid"><div><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY"><p>Leadership Learning Hub</p></div><nav aria-label="Policies">${site.policyLinks.map((link) => `<a href="${escapeHtml(link.href)}">${escapeHtml(link.label)}</a>`).join("")}</nav><a href="#top">Back to top ↑</a></div></footer>
-  <script src="/assets/js/site.js" defer></script>
+  <script type="module" src="/assets/js/site.js"></script>
   <script type="module" src="/assets/js/blead.js"></script>
 </body>
 </html>

@@ -137,3 +137,23 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
   assert.ok(controlledIds.length >= 8);
   assert.ok(controlledIds.every((id) => ids.has(id)));
 });
+
+test("Blead stylesheet preserves the KAINDLY system and narrow reflow", async () => {
+  const css = await readFile(new URL("../assets/css/blead.css", import.meta.url), "utf8");
+  const accessCss = await readFile(new URL("../assets/css/blead-access.css", import.meta.url), "utf8");
+  const html = await readFile(new URL("../Blead/index.html", import.meta.url), "utf8");
+
+  assert.match(html, /href="\/assets\/css\/blead\.css"/);
+  assert.match(css, /--blead-violet:\s*#634cc8/i);
+  assert.match(css, /--blead-surface:\s*#fff(?:fff)?/i);
+  assert.match(css, /--blead-radius:\s*5px/);
+  assert.match(css, /:focus-visible/);
+  assert.match(css, /\[id\][^{]*\{[^}]*scroll-margin-top:/s);
+  assert.match(css, /\.blead-(?:accordion-control|menu-button)[^{]*\{[^}]*min-height:\s*44px/s);
+  assert.match(css, /\.blead-js\s+\.blead-accordion-panel\[hidden\][^{]*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.blead-status[^{]*\{[^}]*white-space:\s*normal/s);
+  assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*grid-template-columns:\s*1fr/);
+  assert.match(css, /@media\s*\(max-width:\s*360px\)/);
+  assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*scroll-behavior:\s*auto\s*!important/);
+  assert.match(accessCss, /:focus-visible/);
+});
