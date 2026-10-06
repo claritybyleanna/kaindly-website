@@ -5,6 +5,7 @@
   "type": "module",
   "description": "The official Kaindly website.",
   "scripts": {
+    "build:blead": "node scripts/build-blead.mjs",
     "test": "node --test tests/*.test.mjs",
     "prototype:blead": "node scripts/build-blead.mjs && node scripts/blead-prototype-server.mjs"
   },
