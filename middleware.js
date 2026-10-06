@@ -1,6 +1,17 @@
 import { next } from "@vercel/functions";
+import {
+  BLEAD_COOKIE_NAME,
+  clearBleadSession,
+  readCookie,
+  sanitizeBleadReturnTo,
+  securePasswordMatch,
+  serializeBleadSession,
+  signBleadSession,
+  verifyBleadSession,
+} from "./lib/blead-auth.js";
 
 const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
+const BLEAD_SESSION_MS = 8 * 60 * 60 * 1000;
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
@@ -157,9 +168,7 @@ export const config = {
   matcher: ["/((?!assets/).*)"],
 };
 
-export default function maintenanceMiddleware() {
-  if (isFullSiteEnvironment()) return next();
-
+function maintenanceResponse() {
   return new Response(maintenanceDocument, {
     status: 503,
     headers: {
@@ -169,4 +178,100 @@ export default function maintenanceMiddleware() {
       "X-Robots-Tag": "noindex, nofollow",
     },
   });
+}
+
+export function isProtectedBleadPath(pathname) {
+  return pathname === "/Blead" || pathname.startsWith("/Blead/");
+}
+
+function redirect(location, headers = {}) {
+  return new Response(null, {
+    status: 303,
+    headers: {
+      Location: String(location),
+      "Cache-Control": "no-store",
+      ...headers,
+    },
+  });
+}
+
+function isSameOriginPost(request, url) {
+  return request.method === "POST" && request.headers.get("origin") === url.origin;
+}
+
+function safeReturnHash(value) {
+  return /^#week-[0-9]{2}$/u.test(value) ? value : "";
+}
+
+export async function handleBleadAccess(
+  request,
+  { password, secret, now = Date.now(), failureDelayMs = 350 } = {},
+) {
+  const url = new URL(request.url);
+  if (!isSameOriginPost(request, url)) {
+    return new Response("Request not accepted.", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  const formData = await request.formData();
+  const candidate = String(formData.get("password") ?? "");
+  const returnTo = sanitizeBleadReturnTo(String(formData.get("returnTo") ?? ""));
+  const returnHash = safeReturnHash(String(formData.get("returnHash") ?? ""));
+
+  if (!(await securePasswordMatch(candidate, password))) {
+    await new Promise((resolve) => setTimeout(resolve, failureDelayMs));
+    const accessUrl = new URL("/Blead/access/", url);
+    accessUrl.searchParams.set("error", "1");
+    accessUrl.searchParams.set("returnTo", returnTo);
+    return redirect(accessUrl);
+  }
+
+  const token = await signBleadSession({ expiresAt: now + BLEAD_SESSION_MS, secret });
+  const destination = `${returnTo.split("#", 1)[0]}${returnHash || returnTo.match(/#[a-z0-9-]+$/iu)?.[0] || ""}`;
+  return redirect(destination, {
+    "Set-Cookie": serializeBleadSession(token, { secure: url.protocol === "https:" }),
+  });
+}
+
+export default async function maintenanceMiddleware(
+  request = new Request("https://www.kaindly.ai/"),
+) {
+  if (!isFullSiteEnvironment()) return maintenanceResponse();
+
+  const url = new URL(request.url);
+  if (!isProtectedBleadPath(url.pathname)) return next();
+
+  const password = process.env.BLEAD_PASSWORD;
+  const secret = process.env.BLEAD_SESSION_SECRET;
+  if (!password || !secret) {
+    return new Response("This learning hub is temporarily unavailable.", {
+      status: 503,
+      headers: {
+        "Cache-Control": "no-store",
+        "Content-Type": "text/plain; charset=utf-8",
+        "X-Robots-Tag": "noindex, nofollow",
+      },
+    });
+  }
+
+  if (url.pathname === "/Blead/access/" || url.pathname === "/Blead/access") {
+    if (request.method === "POST") return handleBleadAccess(request, { password, secret });
+    const token = readCookie(request.headers.get("cookie"), BLEAD_COOKIE_NAME);
+    return (await verifyBleadSession(token, secret)) ? redirect("/Blead/") : next();
+  }
+
+  if (url.pathname === "/Blead/logout/" && isSameOriginPost(request, url)) {
+    return redirect("/Blead/access/", {
+      "Set-Cookie": clearBleadSession({ secure: url.protocol === "https:" }),
+    });
+  }
+
+  const token = readCookie(request.headers.get("cookie"), BLEAD_COOKIE_NAME);
+  if (await verifyBleadSession(token, secret)) return next();
+
+  const accessUrl = new URL("/Blead/access/", url);
+  accessUrl.searchParams.set("returnTo", url.pathname + url.search);
+  return redirect(accessUrl);
 }

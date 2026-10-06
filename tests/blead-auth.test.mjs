@@ -34,6 +34,7 @@ test("cookie helpers scope and clear the Blead session", () => {
   assert.match(cookie, /SameSite=Lax/);
   assert.match(cookie, /Path=\/Blead\//);
   assert.equal(readCookie(`${cookie}; another=value`, BLEAD_COOKIE_NAME), "signed-token");
+  assert.equal(readCookie(null, BLEAD_COOKIE_NAME), undefined);
   assert.match(clearBleadSession({ secure: true }), /Max-Age=0/);
 });
 
@@ -43,4 +44,135 @@ test("return destinations cannot leave the protected route", () => {
   assert.equal(sanitizeBleadReturnTo("https://attacker.example"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("//attacker.example"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("/contact/"), "/Blead/");
+});
+
+async function withBleadEnvironment(values, run) {
+  const keys = ["VERCEL_ENV", "VERCEL_TARGET_ENV", "BLEAD_PASSWORD", "BLEAD_SESSION_SECRET"];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  for (const key of keys) {
+    if (values[key] === undefined) delete process.env[key];
+    else process.env[key] = values[key];
+  }
+
+  try {
+    return await run();
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+}
+
+const testEnvironment = {
+  VERCEL_ENV: "development",
+  BLEAD_PASSWORD: "test-password",
+  BLEAD_SESSION_SECRET: "test-session-secret-with-adequate-length",
+};
+
+test("Blead middleware protects only the learning hub and its content", async () => {
+  const { default: middleware, isProtectedBleadPath } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    assert.equal(isProtectedBleadPath("/Blead/"), true);
+    assert.equal(isProtectedBleadPath("/blead/"), false);
+    assert.equal(isProtectedBleadPath("/about/"), false);
+
+    const publicResponse = await middleware(new Request("https://www.kaindly.ai/about/"));
+    assert.equal(publicResponse.headers.get("x-middleware-next"), "1");
+
+    const protectedResponse = await middleware(new Request("https://www.kaindly.ai/Blead/"));
+    assert.equal(protectedResponse.status, 303);
+    const accessUrl = new URL(protectedResponse.headers.get("location"));
+    assert.equal(accessUrl.pathname, "/Blead/access/");
+    assert.equal(accessUrl.searchParams.get("returnTo"), "/Blead/");
+
+    const contentResponse = await middleware(new Request("https://www.kaindly.ai/Blead/content.js"));
+    assert.equal(contentResponse.status, 303);
+  });
+});
+
+test("Blead access rejects a bad password without exposing it", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    const body = new URLSearchParams({ password: "wrong", returnTo: "/Blead/" });
+    const response = await middleware(new Request("https://www.kaindly.ai/Blead/access/", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        origin: "https://www.kaindly.ai",
+      },
+      body,
+    }));
+    assert.equal(response.status, 303);
+    assert.match(response.headers.get("location"), /error=1/);
+    assert.doesNotMatch(response.headers.get("location"), /wrong/);
+    assert.equal(response.headers.get("set-cookie"), null);
+  });
+});
+
+test("Blead access creates a scoped session and sanitizes its return destination", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    const body = new URLSearchParams({
+      password: testEnvironment.BLEAD_PASSWORD,
+      returnTo: "https://attacker.example/",
+      returnHash: "#week-01",
+    });
+    const response = await middleware(new Request("https://www.kaindly.ai/Blead/access/", {
+      method: "POST",
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        origin: "https://www.kaindly.ai",
+      },
+      body,
+    }));
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/Blead/#week-01");
+    assert.match(response.headers.get("set-cookie"), new RegExp(`^${BLEAD_COOKIE_NAME}=`));
+    assert.doesNotMatch(response.headers.get("set-cookie"), /test-password/);
+  });
+});
+
+test("Blead middleware accepts valid sessions and rejects tampered sessions", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    const token = await signBleadSession({
+      expiresAt: Date.now() + 60_000,
+      secret: testEnvironment.BLEAD_SESSION_SECRET,
+    });
+    const valid = await middleware(new Request("https://www.kaindly.ai/Blead/", {
+      headers: { cookie: `${BLEAD_COOKIE_NAME}=${token}` },
+    }));
+    assert.equal(valid.headers.get("x-middleware-next"), "1");
+
+    const tampered = await middleware(new Request("https://www.kaindly.ai/Blead/", {
+      headers: { cookie: `${BLEAD_COOKIE_NAME}=${token}x` },
+    }));
+    assert.equal(tampered.status, 303);
+  });
+});
+
+test("Blead middleware fails closed only for Blead when configuration is missing", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment({ VERCEL_ENV: "development" }, async () => {
+    const protectedResponse = await middleware(new Request("https://www.kaindly.ai/Blead/"));
+    assert.equal(protectedResponse.status, 503);
+    assert.equal(protectedResponse.headers.get("cache-control"), "no-store");
+
+    const publicResponse = await middleware(new Request("https://www.kaindly.ai/about/"));
+    assert.equal(publicResponse.headers.get("x-middleware-next"), "1");
+  });
+});
+
+test("Blead logout clears the scoped session", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    const response = await middleware(new Request("https://www.kaindly.ai/Blead/logout/", {
+      method: "POST",
+      headers: { origin: "https://www.kaindly.ai" },
+    }));
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/Blead/access/");
+    assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+  });
 });
