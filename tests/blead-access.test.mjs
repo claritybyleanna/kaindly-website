@@ -9,7 +9,10 @@ test("Blead access page is branded, generic, and safe", () => {
   const html = readFileSync("Blead/access/index.html", "utf8");
   assert.equal((html.match(/<h1\b/g) || []).length, 1);
   assert.match(html, /<meta name="robots" content="noindex, nofollow">/);
-  assert.match(html, /Leadership Learning Hub/);
+  assert.match(html, /<title>AI Leadership Accelerator Access \| KAINDLY<\/title>/);
+  assert.match(html, /<p class="eyebrow">Protected program hub<\/p>/);
+  assert.match(html, /<h1 id="access-title">Enter the AI Leadership Accelerator<\/h1>/);
+  assert.doesNotMatch(html, /prototype|Bracco/i);
   assert.match(html, /src="\.\.\/\.\.\/assets\/brand\/logo-secondary-violet\.svg" alt="KAINDLY"/);
   assert.match(html, /<form[^>]+method="post"[^>]+action="\/Blead\/access\/"[^>]*>/);
   assert.match(html, /<label for="program-password">Program password<\/label>/);

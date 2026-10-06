@@ -73,7 +73,14 @@ test("approved same-site materials render as real downloads only when available"
   const downloadable = structuredClone(bleadContent);
   downloadable.resources[0].availability = "available";
   downloadable.resources[0].publicUrl = "/Blead/materials/program-overview.pdf";
-  const html = renderBleadPage(downloadable);
+  assert.throws(
+    () => renderBleadPage(downloadable),
+    /download file does not exist/,
+  );
+
+  const html = renderBleadPage(downloadable, {
+    downloadExists: (publicPath) => publicPath === "/Blead/materials/program-overview.pdf",
+  });
   assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/materials\/program-overview\.pdf"[^>]+download[^>]*>Download material<\/a>/);
 
   const missingFile = structuredClone(downloadable);

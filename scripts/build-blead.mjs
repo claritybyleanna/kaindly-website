@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { bleadContent } from "../Blead/content.js";
@@ -61,12 +62,16 @@ function assertApprovedDownloadPath(value, field) {
   }
 }
 
+function defaultDownloadExists(publicPath) {
+  return existsSync(new URL(`..${publicPath}`, import.meta.url));
+}
+
 function assertApprovedEngagementDestination(value, field) {
   if (value === approvedAssessmentUrl) return;
   assertApprovedFragment(value, field);
 }
 
-export function validatePublicContent(content) {
+export function validatePublicContent(content, { downloadExists = defaultDownloadExists } = {}) {
   if (content?.site?.intendedPath !== "/Blead/") {
     throw new Error("The protected route must preserve the exact /Blead/ casing");
   }
@@ -86,6 +91,9 @@ export function validatePublicContent(content) {
     if (resource.availability === "available") {
       if (!resource.publicUrl) throw new Error("An available material requires an approved download");
       assertApprovedDownloadPath(resource.publicUrl, "Material destination");
+      if (!downloadExists(resource.publicUrl)) {
+        throw new Error(`Material download file does not exist: ${resource.publicUrl}`);
+      }
     } else if (resource.publicUrl !== null) {
       throw new Error("Only available materials can include a download destination");
     }
@@ -204,8 +212,8 @@ function renderEngagementLink(destination, label, { showArrow = false } = {}) {
   return `<a href="${escapeHtml(destination)}"${attributes}>${escapeHtml(label)}${arrow}${newTabNote}</a>`;
 }
 
-export function renderBleadPage(content) {
-  validatePublicContent(content);
+export function renderBleadPage(content, options = {}) {
+  validatePublicContent(content, options);
   const { site } = content;
   const nav = renderNav(content);
 
