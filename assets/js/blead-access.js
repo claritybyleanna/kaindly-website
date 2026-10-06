@@ -8,7 +8,8 @@ function initializeBleadAccess() {
   const requestedReturn = params.get("returnTo") || "/Blead/";
   const returnTo = /^\/Blead\/(?:#[a-z0-9-]+)?$/i.test(requestedReturn) ? requestedReturn : "/Blead/";
   form.elements.returnTo.value = returnTo;
-  form.elements.returnHash.value = /^#week-[0-9]{2}$/.test(window.location.hash) ? window.location.hash : "";
+  const requestedHash = params.get("returnHash") || window.location.hash;
+  form.elements.returnHash.value = /^#week-[0-9]{2}$/.test(requestedHash) ? requestedHash : "";
 
   if (params.get("error") === "1") {
     error.hidden = false;

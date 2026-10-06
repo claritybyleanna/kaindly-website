@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   BLEAD_COOKIE_NAME,
   clearBleadSession,
+  isValidBleadConfiguration,
   readCookie,
   sanitizeBleadReturnTo,
   securePasswordMatch,
@@ -10,6 +11,16 @@ import {
   signBleadSession,
   verifyBleadSession,
 } from "../lib/blead-auth.js";
+
+test("Blead configuration requires a distinct 32-byte signing secret", async () => {
+  assert.equal(isValidBleadConfiguration("review-password", "a".repeat(32)), true);
+  assert.equal(isValidBleadConfiguration("review-password", "short-secret"), false);
+  assert.equal(isValidBleadConfiguration("same-value".repeat(4), "same-value".repeat(4)), false);
+  await assert.rejects(
+    signBleadSession({ expiresAt: 20_000, secret: "short-secret" }),
+    /at least 32 bytes/,
+  );
+});
 
 test("password comparison accepts only an exact value", async () => {
   assert.equal(await securePasswordMatch("correct", "correct"), true);
@@ -31,7 +42,7 @@ test("cookie helpers scope and clear the Blead session", () => {
   assert.match(cookie, new RegExp(`^${BLEAD_COOKIE_NAME}=signed-token`));
   assert.match(cookie, /HttpOnly/);
   assert.match(cookie, /Secure/);
-  assert.match(cookie, /SameSite=Lax/);
+  assert.match(cookie, /SameSite=Strict/);
   assert.match(cookie, /Path=\/Blead\//);
   assert.equal(readCookie(`${cookie}; another=value`, BLEAD_COOKIE_NAME), "signed-token");
   assert.equal(readCookie(null, BLEAD_COOKIE_NAME), undefined);
@@ -94,7 +105,7 @@ test("Blead middleware protects only the learning hub and its content", async ()
 test("Blead access rejects a bad password without exposing it", async () => {
   const { default: middleware } = await import("../middleware.js");
   await withBleadEnvironment(testEnvironment, async () => {
-    const body = new URLSearchParams({ password: "wrong", returnTo: "/Blead/" });
+    const body = new URLSearchParams({ password: "wrong", returnTo: "/Blead/", returnHash: "#week-01" });
     const response = await middleware(new Request("https://www.kaindly.ai/Blead/access/", {
       method: "POST",
       headers: {
@@ -105,6 +116,9 @@ test("Blead access rejects a bad password without exposing it", async () => {
     }));
     assert.equal(response.status, 303);
     assert.match(response.headers.get("location"), /error=1/);
+    const retryUrl = new URL(response.headers.get("location"));
+    assert.equal(retryUrl.searchParams.get("returnHash"), "#week-01");
+    assert.equal(retryUrl.hash, "#access-error-noscript");
     assert.doesNotMatch(response.headers.get("location"), /wrong/);
     assert.equal(response.headers.get("set-cookie"), null);
   });
@@ -144,6 +158,7 @@ test("Blead middleware accepts valid sessions and rejects tampered sessions", as
       headers: { cookie: `${BLEAD_COOKIE_NAME}=${token}` },
     }));
     assert.equal(valid.headers.get("x-middleware-next"), "1");
+    assert.equal(valid.headers.get("cache-control"), "private, no-store");
 
     const tampered = await middleware(new Request("https://www.kaindly.ai/Blead/", {
       headers: { cookie: `${BLEAD_COOKIE_NAME}=${token}x` },
@@ -161,6 +176,15 @@ test("Blead middleware fails closed only for Blead when configuration is missing
 
     const publicResponse = await middleware(new Request("https://www.kaindly.ai/about/"));
     assert.equal(publicResponse.headers.get("x-middleware-next"), "1");
+  });
+
+  await withBleadEnvironment({
+    VERCEL_ENV: "development",
+    BLEAD_PASSWORD: "same-value".repeat(4),
+    BLEAD_SESSION_SECRET: "same-value".repeat(4),
+  }, async () => {
+    const protectedResponse = await middleware(new Request("https://www.kaindly.ai/Blead/"));
+    assert.equal(protectedResponse.status, 503);
   });
 });
 

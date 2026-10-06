@@ -38,6 +38,28 @@ python3 -m http.server 4173
 
 Then visit `http://localhost:4173`.
 
+## Unpublished Leadership Learning Hub Prototype
+
+The local-only learning-hub review lives at the exact case-sensitive route `/Blead/`.
+It is protected by the dedicated local server rather than the ordinary static preview.
+
+1. Create an ignored `.env.local` file with `BLEAD_PASSWORD` and a separate,
+   randomly generated `BLEAD_SESSION_SECRET` of at least 32 bytes. Never commit
+   either value.
+2. Start the protected review server:
+
+   ```bash
+   npm run prototype:blead
+   ```
+
+3. Visit `http://127.0.0.1:4173/Blead/` and use the privately supplied review
+   password.
+
+The prototype contains fictional sample content for design review only. Keep its
+branch local: do not push, deploy, link it from the public navigation, or treat
+the examples as an approved curriculum without separate authorization. The
+Production website and its public navigation remain unchanged.
+
 ## Publish With GitHub Pages
 
 1. Create an empty GitHub repository.

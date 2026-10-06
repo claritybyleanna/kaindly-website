@@ -14,6 +14,17 @@ const resourceLabels = {
   unavailable: "Temporarily unavailable",
   external: "External authorized resource",
 };
+const approvedSectionFragments = new Set([
+  "#overview",
+  "#program-plan",
+  "#materials",
+  "#updates",
+  "#help",
+  "#how-to-use",
+]);
+const approvedPolicyPaths = new Set(["/privacy/", "/terms/"]);
+const approvedWeekStates = new Set(Object.keys(stateLabels));
+const approvedResourceStates = new Set(Object.keys(resourceLabels));
 
 export function escapeHtml(value = "") {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -25,9 +36,15 @@ export function escapeHtml(value = "") {
   })[character]);
 }
 
-function assertInternalDestination(value, field) {
-  if (!value || (!value.startsWith("#") && !value.startsWith("/"))) {
-    throw new Error(`${field} must be a real internal destination`);
+function assertApprovedFragment(value, field) {
+  if (!approvedSectionFragments.has(value)) {
+    throw new Error(`${field} must use an approved fragment`);
+  }
+}
+
+function assertApprovedSameSitePath(value, field) {
+  if (!approvedPolicyPaths.has(value)) {
+    throw new Error(`${field} must use an approved same-site path`);
   }
 }
 
@@ -45,13 +62,29 @@ export function validatePublicContent(content) {
     throw new Error("Every prototype resource must be labeled as sample content");
   }
   for (const resource of content.resources) {
+    if (!/^resource-[a-z0-9-]+$/u.test(resource.id) || !approvedResourceStates.has(resource.availability)) {
+      throw new Error("Resource IDs and states must use approved values");
+    }
     if (resource.publicUrl !== null) {
       throw new Error("Prototype resources cannot include a live destination");
     }
   }
-  assertInternalDestination(content.site.nextStep.destination, "Next-step destination");
+  const weekIds = new Set(content.weeks.map(({ id }) => id));
+  if (weekIds.size !== content.weeks.length || content.weeks.some(({ id, state }) => !/^week-[0-9]{2}$/u.test(id) || !approvedWeekStates.has(state))) {
+    throw new Error("Week IDs and states must use approved values");
+  }
+  for (const week of content.weeks) {
+    if (week.nextWeekId && !weekIds.has(week.nextWeekId)) throw new Error("Next week must reference a known week ID");
+    if (week.resources.some((id) => !content.resources.some((resource) => resource.id === id))) {
+      throw new Error("Week resources must reference known resource IDs");
+    }
+  }
+  assertApprovedFragment(content.site.nextStep.destination, "Next-step destination");
   for (const update of content.updates) {
-    assertInternalDestination(update.destination, "Update destination");
+    assertApprovedFragment(update.destination, "Update destination");
+  }
+  for (const link of content.site.policyLinks) {
+    assertApprovedSameSitePath(link.href, "Policy destination");
   }
 
   const serialized = JSON.stringify(content);
@@ -103,10 +136,10 @@ function renderWeek(week, resources) {
   }
 
   const hasDetails = panelParts.length > 0;
-  const disclosure = hasDetails ? `<button type="button" id="${escapeHtml(week.id)}-control" class="blead-accordion-control" aria-expanded="${isOpen}" aria-controls="${escapeHtml(week.id)}-panel" data-accordion-control>
+  const disclosure = hasDetails ? `<button type="button" id="${escapeHtml(week.id)}-control" class="blead-accordion-control blead-enhanced-control" aria-expanded="${isOpen}" aria-controls="${escapeHtml(week.id)}-panel" data-accordion-control>
           <span data-accordion-label>${isOpen ? "Hide details" : "View details"}</span><span data-accordion-icon aria-hidden="true">+</span>
         </button>` : "";
-  const panel = hasDetails ? `<div id="${escapeHtml(week.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(week.id)}-control" data-accordion-panel>${panelParts.join("")}</div>` : "";
+  const panel = hasDetails ? `<div id="${escapeHtml(week.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(week.id)}-heading" data-accordion-panel>${panelParts.join("")}</div>` : "";
 
   return `<article class="blead-week" id="${escapeHtml(week.id)}" data-week data-state="${escapeHtml(week.state)}">
     <div class="blead-week-summary">
@@ -117,27 +150,31 @@ function renderWeek(week, resources) {
       </div>
       <div class="blead-week-actions">
         <span class="blead-status blead-status--${escapeHtml(week.state)}">${escapeHtml(stateLabels[week.state])}</span>
-        ${disclosure}
-      </div>
+${disclosure ? `        ${disclosure}\n` : ""}      </div>
     </div>
-    ${panel}
-  </article>`;
+${panel ? `    ${panel}\n` : ""}  </article>`;
 }
 
 function renderResource(resource) {
+  const accessNote = resource.accessNote
+    ? `    <p class="blead-access-note">${escapeHtml(resource.accessNote)}</p>\n`
+    : "";
+  const demoAction = resource.availability === "external"
+    ? `    <button class="blead-resource-demo" type="button" disabled aria-disabled="true">Open recording</button>\n`
+    : "";
+
   return `<article class="blead-resource" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
     <span class="blead-resource-type">${escapeHtml(resource.type)} · Sample</span>
     <h3>${escapeHtml(resource.title)}</h3>
     <p>${escapeHtml(resource.description)}</p>
-    ${resource.accessNote ? `<p class="blead-access-note">${escapeHtml(resource.accessNote)}</p>` : ""}
-    <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
-  </article>`;
+${accessNote}    <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
+${demoAction}  </article>`;
 }
 
 function renderFaq(faq) {
   return `<article class="blead-faq" data-faq>
-    <h3><button type="button" id="${escapeHtml(faq.id)}-control" aria-expanded="false" aria-controls="${escapeHtml(faq.id)}-panel" data-accordion-control>${escapeHtml(faq.question)}<span aria-hidden="true">+</span></button></h3>
-    <div id="${escapeHtml(faq.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(faq.id)}-control" data-accordion-panel><p>${escapeHtml(faq.answer)}</p></div>
+    <h3><span id="${escapeHtml(faq.id)}-heading">${escapeHtml(faq.question)}</span><button class="blead-faq-control blead-enhanced-control" type="button" id="${escapeHtml(faq.id)}-control" aria-label="Toggle answer: ${escapeHtml(faq.question)}" aria-expanded="false" aria-controls="${escapeHtml(faq.id)}-panel" data-accordion-control><span data-accordion-icon aria-hidden="true">+</span></button></h3>
+    <div id="${escapeHtml(faq.id)}-panel" class="blead-accordion-panel" aria-labelledby="${escapeHtml(faq.id)}-heading" data-accordion-panel><p>${escapeHtml(faq.answer)}</p></div>
   </article>`;
 }
 

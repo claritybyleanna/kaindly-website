@@ -31,6 +31,23 @@ test("sample content is public-safe and explicitly labeled", async () => {
   );
 });
 
+test("Blead generator rejects hostile or malformed destinations", async () => {
+  const { bleadContent } = await import("../Blead/content.js");
+  const { renderBleadPage } = await import("../scripts/build-blead.mjs");
+
+  const protocolRelative = structuredClone(bleadContent);
+  protocolRelative.site.nextStep.destination = "//attacker.example";
+  assert.throws(() => renderBleadPage(protocolRelative), /approved fragment/);
+
+  const scriptedPolicy = structuredClone(bleadContent);
+  scriptedPolicy.site.policyLinks[0].href = "javascript:alert(1)";
+  assert.throws(() => renderBleadPage(scriptedPolicy), /same-site/);
+
+  const unknownFragment = structuredClone(bleadContent);
+  unknownFragment.updates[0].destination = "#not-a-section";
+  assert.throws(() => renderBleadPage(unknownFragment), /approved fragment/);
+});
+
 test("generated hub is semantic, accessible, and review-safe", async () => {
   const { bleadContent } = await import("../Blead/content.js");
   const { renderBleadPage } = await import("../scripts/build-blead.mjs");
@@ -45,8 +62,12 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.match(html, />Overview available</);
   assert.match(html, />Coming soon</);
   assert.match(html, /aria-expanded="true"[^>]+aria-controls="week-01-panel"/);
-  assert.match(html, /id="week-01-panel"[^>]+aria-labelledby="week-01-control"/);
+  assert.match(html, /id="week-01-panel"[^>]+aria-labelledby="week-01-heading"/);
   assert.match(html, /aria-expanded="false"[^>]+aria-controls="faq-start-panel"/);
+  assert.match(html, /class="blead-accordion-control blead-enhanced-control"/);
+  assert.match(html, /class="blead-faq-control blead-enhanced-control"/);
+  assert.match(html, /data-accordion-icon aria-hidden="true">\+</);
+  assert.match(html, /data-resource-state="external"[\s\S]*?<button[^>]+disabled[^>]*>Open recording<\/button>/);
   assert.match(html, /href="\/privacy\/"/);
   assert.match(html, /href="\/terms\/"/);
   assert.match(html, /action="\/Blead\/logout\/"/);
@@ -80,6 +101,7 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
 
   const panel = { hidden: true };
   const label = { textContent: "View details" };
+  const icon = { textContent: "+" };
   const button = {
     attributes: new Map([
       ["aria-controls", "week-02-panel"],
@@ -87,7 +109,11 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
     ]),
     getAttribute(name) { return this.attributes.get(name); },
     setAttribute(name, value) { this.attributes.set(name, value); },
-    querySelector(selector) { return selector === "[data-accordion-label]" ? label : null; },
+    querySelector(selector) {
+      if (selector === "[data-accordion-label]") return label;
+      if (selector === "[data-accordion-icon]") return icon;
+      return null;
+    },
     ownerDocument: { getElementById: (id) => id === "week-02-panel" ? panel : null },
   };
 
@@ -95,9 +121,11 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
   assert.equal(button.getAttribute("aria-expanded"), "true");
   assert.equal(panel.hidden, false);
   assert.equal(label.textContent, "Hide details");
+  assert.equal(icon.textContent, "−");
   setDisclosure(button, false);
   assert.equal(button.getAttribute("aria-expanded"), "false");
   assert.equal(panel.hidden, true);
+  assert.equal(icon.textContent, "+");
 
   const deepPanel = { hidden: true };
   let scrolled = false;
@@ -136,6 +164,9 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
   const controlledIds = [...html.matchAll(/\baria-controls="([^"]+)"/g)].map(([, id]) => id);
   assert.ok(controlledIds.length >= 8);
   assert.ok(controlledIds.every((id) => ids.has(id)));
+  const script = await readFile(new URL("../assets/js/blead.js", import.meta.url), "utf8");
+  assert.match(script, /event\.preventDefault\(\)/);
+  assert.match(script, /focusMenuDestination\(documentRoot, link\)/);
 });
 
 test("Blead stylesheet preserves the KAINDLY system and narrow reflow", async () => {
@@ -151,6 +182,8 @@ test("Blead stylesheet preserves the KAINDLY system and narrow reflow", async ()
   assert.match(css, /\[id\][^{]*\{[^}]*scroll-margin-top:/s);
   assert.match(css, /\.blead-(?:accordion-control|menu-button)[^{]*\{[^}]*min-height:\s*44px/s);
   assert.match(css, /\.blead-js\s+\.blead-accordion-panel\[hidden\][^{]*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.blead-enhanced-control[^{]*\{[^}]*display:\s*none/s);
+  assert.match(css, /\.blead-js\s+\.blead-enhanced-control[^{]*\{[^}]*display:\s*inline-flex/s);
   assert.match(css, /\.blead-status[^{]*\{[^}]*white-space:\s*normal/s);
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*grid-template-columns:\s*1fr/);
   assert.match(css, /@media\s*\(max-width:\s*360px\)/);

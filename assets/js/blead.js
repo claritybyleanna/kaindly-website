@@ -50,6 +50,16 @@ function initializeDisclosures(documentRoot) {
   });
 }
 
+function focusMenuDestination(documentRoot, link) {
+  const hash = link.hash;
+  const target = hash ? documentRoot.getElementById(hash.slice(1)) : null;
+  if (!target) return;
+
+  target.setAttribute("tabindex", "-1");
+  target.focus({ preventScroll: true });
+  target.addEventListener("blur", () => target.removeAttribute("tabindex"), { once: true });
+}
+
 function initializeMenu(documentRoot) {
   const button = documentRoot.querySelector("[data-menu-button]");
   const menu = documentRoot.querySelector("[data-menu]");
@@ -66,7 +76,20 @@ function initializeMenu(documentRoot) {
     button.setAttribute("aria-expanded", String(opening));
     menu.toggleAttribute("data-open", opening);
   });
-  menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => closeMenu()));
+  menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", (event) => {
+    const wasOpen = button.getAttribute("aria-expanded") === "true";
+    if (!wasOpen || !link.hash) {
+      closeMenu();
+      return;
+    }
+
+    event.preventDefault();
+    closeMenu();
+    const pageWindow = documentRoot.defaultView;
+    if (pageWindow?.location.hash !== link.hash) pageWindow.location.hash = link.hash;
+    else documentRoot.getElementById(link.hash.slice(1))?.scrollIntoView({ block: "start" });
+    pageWindow?.requestAnimationFrame(() => focusMenuDestination(documentRoot, link));
+  }));
   documentRoot.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && button.getAttribute("aria-expanded") === "true") {
       closeMenu({ returnFocus: true });

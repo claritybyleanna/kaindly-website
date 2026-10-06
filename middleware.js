@@ -2,6 +2,7 @@ import { next } from "@vercel/functions";
 import {
   BLEAD_COOKIE_NAME,
   clearBleadSession,
+  isValidBleadConfiguration,
   readCookie,
   sanitizeBleadReturnTo,
   securePasswordMatch,
@@ -195,6 +196,13 @@ function redirect(location, headers = {}) {
   });
 }
 
+function nextProtected() {
+  const response = next();
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
 function isSameOriginPost(request, url) {
   return request.method === "POST" && request.headers.get("origin") === url.origin;
 }
@@ -225,6 +233,8 @@ export async function handleBleadAccess(
     const accessUrl = new URL("/Blead/access/", url);
     accessUrl.searchParams.set("error", "1");
     accessUrl.searchParams.set("returnTo", returnTo);
+    if (returnHash) accessUrl.searchParams.set("returnHash", returnHash);
+    accessUrl.hash = "access-error-noscript";
     return redirect(accessUrl);
   }
 
@@ -245,7 +255,7 @@ export default async function maintenanceMiddleware(
 
   const password = process.env.BLEAD_PASSWORD;
   const secret = process.env.BLEAD_SESSION_SECRET;
-  if (!password || !secret) {
+  if (!isValidBleadConfiguration(password, secret)) {
     return new Response("This learning hub is temporarily unavailable.", {
       status: 503,
       headers: {
@@ -259,7 +269,7 @@ export default async function maintenanceMiddleware(
   if (url.pathname === "/Blead/access/" || url.pathname === "/Blead/access") {
     if (request.method === "POST") return handleBleadAccess(request, { password, secret });
     const token = readCookie(request.headers.get("cookie"), BLEAD_COOKIE_NAME);
-    return (await verifyBleadSession(token, secret)) ? redirect("/Blead/") : next();
+    return (await verifyBleadSession(token, secret)) ? redirect("/Blead/") : nextProtected();
   }
 
   if (url.pathname === "/Blead/logout/" && isSameOriginPost(request, url)) {
@@ -269,7 +279,7 @@ export default async function maintenanceMiddleware(
   }
 
   const token = readCookie(request.headers.get("cookie"), BLEAD_COOKIE_NAME);
-  if (await verifyBleadSession(token, secret)) return next();
+  if (await verifyBleadSession(token, secret)) return nextProtected();
 
   const accessUrl = new URL("/Blead/access/", url);
   accessUrl.searchParams.set("returnTo", url.pathname + url.search);

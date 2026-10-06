@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
 const pageFiles = [
@@ -29,9 +30,68 @@ const launchAssets = [
   "assets/brand/gradient.png",
 ];
 
+function filesBelow(path) {
+  if (!existsSync(path)) return [];
+  return readdirSync(path).flatMap((name) => {
+    const child = resolve(path, name);
+    return statSync(child).isDirectory() ? filesBelow(child) : [child];
+  });
+}
+
 test("official web brand assets are available at stable paths", () => {
   for (const file of launchAssets) {
     assert.equal(existsSync(file), true, `${file} is missing`);
+  }
+});
+
+test("Blead public bundle contains only protected public-safe review content", () => {
+  const routeFiles = [
+    ...filesBelow("Blead"),
+    "assets/css/blead.css",
+    "assets/css/blead-access.css",
+    "assets/js/blead.js",
+    "assets/js/blead-access.js",
+  ].filter((file) => /\.(?:html|css|js|map)$/.test(file));
+
+  assert.ok(routeFiles.length >= 7, "the protected route bundle is incomplete");
+  assert.equal(routeFiles.some((file) => file.endsWith(".map")), false, "source maps must not expose review source");
+  const localEnvironment = existsSync(".env.local") ? readFileSync(".env.local", "utf8") : "";
+  const localPassword = localEnvironment.match(/^BLEAD_PASSWORD=(.+)$/mu)?.[1] ?? "";
+  const trackedFiles = execFileSync("git", ["ls-files", "-z"], { encoding: "utf8" })
+    .split("\0")
+    .filter(Boolean);
+  if (localPassword) {
+    for (const file of trackedFiles) {
+      assert.equal(readFileSync(file).includes(Buffer.from(localPassword)), false, `${file} contains the local review password`);
+    }
+  }
+
+  for (const file of routeFiles) {
+    const source = readFileSync(file, "utf8");
+    if (localPassword) {
+      assert.equal(source.includes(localPassword), false, `${file} contains the local review password`);
+    }
+    assert.doesNotMatch(source, /BLEAD_PASSWORD\s*=/i, `${file} contains password configuration`);
+    assert.doesNotMatch(source, /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/i, `${file} contains an email address`);
+    assert.doesNotMatch(source, /\b20\d{2}\b/, `${file} contains a date or year`);
+    assert.doesNotMatch(source, /(?:file|ftp|smb):\/\//i, `${file} contains a private URL scheme`);
+    assert.doesNotMatch(source, /(?:meeting[ _-]?id|access[ _-]?token|bearer\s+[a-z0-9._-]+)/i, `${file} contains a meeting or access credential`);
+    assert.doesNotMatch(source, /This Markdown is the design input|Claude Design|source brief/i, `${file} copies editorial source material`);
+    assert.doesNotMatch(source, /\b(?:TODO|TBD|FIXME)\b/i, `${file} contains an unfinished marker`);
+    assert.doesNotMatch(source, /google-analytics|googletagmanager|segment\.com|mixpanel|marketing pixel|newsletter|beehiiv/i, `${file} contains tracking or capture code`);
+    assert.doesNotMatch(source, /href=["']#["']/i, `${file} contains a fake link`);
+  }
+
+  for (const htmlFile of ["Blead/index.html", "Blead/access/index.html"]) {
+    const html = readFileSync(htmlFile, "utf8");
+    const forms = [...html.matchAll(/<form\b[\s\S]*?<\/form>/gi)].map(([form]) => form);
+    for (const form of forms) {
+      assert.match(form, /action="\/Blead\/(?:access|logout)\/"/, `${htmlFile} contains an unapproved form`);
+    }
+  }
+
+  for (const [file] of pageFiles) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /href="[^"]*\/Blead(?:\/|#)/i, `${file} exposes the protected prototype`);
   }
 });
 

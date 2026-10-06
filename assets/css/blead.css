@@ -635,6 +635,18 @@
   font-weight: 700;
 }
 
+.blead-resource-demo {
+  display: block;
+  min-height: 44px;
+  margin-top: 18px;
+  padding: 10px 14px;
+  border: 1px solid var(--blead-border);
+  border-radius: var(--blead-radius);
+  background: var(--blead-periwinkle-pale);
+  color: var(--blead-muted);
+  cursor: not-allowed;
+}
+
 .blead-empty-state {
   margin-top: 20px;
   padding: 28px;
@@ -706,17 +718,22 @@
 }
 
 .blead-faq h3 {
-  margin: 0;
-}
-
-.blead-faq button {
   display: flex;
-  width: 100%;
   min-height: 64px;
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 18px 0;
+  margin: 0;
+  color: var(--blead-charcoal);
+}
+
+.blead-faq button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--blead-charcoal);
@@ -736,6 +753,14 @@
   margin: 0;
   color: var(--blead-muted);
   line-height: 1.55;
+}
+
+.blead-enhanced-control {
+  display: none;
+}
+
+.blead-js .blead-enhanced-control {
+  display: inline-flex;
 }
 
 .blead-footer {

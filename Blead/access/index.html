@@ -30,6 +30,10 @@
       <p class="access-error" role="alert" aria-live="assertive" hidden data-access-error>
         That password was not accepted. Check it and try again.
       </p>
+      <noscript>
+        <style>#access-error-noscript:not(:target) { display: none; }</style>
+        <p class="access-error" id="access-error-noscript">That password was not accepted. Check it and try again.</p>
+      </noscript>
       <p class="blead-access-note">This shared password provides access to general program information. Do not share it outside the approved participant group.</p>
     </section>
   </main>

@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import {
   BLEAD_COOKIE_NAME,
   clearBleadSession,
+  isValidBleadConfiguration,
   readCookie,
   sanitizeBleadReturnTo,
   securePasswordMatch,
@@ -25,6 +26,32 @@ const CONTENT_TYPES = new Map([
   [".png", "image/png"],
   [".svg", "image/svg+xml"],
   [".webp", "image/webp"],
+]);
+const PUBLIC_PAGE_PATHS = new Set([
+  "/",
+  "/index.html",
+  "/about/",
+  "/about/index.html",
+  "/assessment/",
+  "/assessment/index.html",
+  "/collective/",
+  "/collective/index.html",
+  "/contact/",
+  "/contact/index.html",
+  "/insights/",
+  "/insights/index.html",
+  "/insights/exclusion-inequity-ai/",
+  "/insights/exclusion-inequity-ai/index.html",
+  "/insights/kaindly-standards/",
+  "/insights/kaindly-standards/index.html",
+  "/insights/take-charge-of-your-ai-future/",
+  "/insights/take-charge-of-your-ai-future/index.html",
+  "/McLendon/",
+  "/McLendon/index.html",
+  "/privacy/",
+  "/privacy/index.html",
+  "/terms/",
+  "/terms/index.html",
 ]);
 
 function loadLocalEnvironment() {
@@ -56,7 +83,11 @@ function send(response, status, body, headers = {}) {
 }
 
 function requestUrl(request) {
-  return new URL(request.url, `http://${request.headers.host || "127.0.0.1"}`);
+  return new URL(request.url, `http://${request.headers.host}`);
+}
+
+export function isLoopbackHost(host = "") {
+  return /^(?:127\.0\.0\.1|localhost|\[::1\])(?::[0-9]{1,5})?$/iu.test(host);
 }
 
 function sameOriginPost(request, url) {
@@ -84,6 +115,9 @@ function resolveStaticFile(pathname) {
     return null;
   }
   if (decoded.split("/").some((segment) => segment.startsWith("."))) return null;
+  const isPublicAsset = decoded.startsWith("/assets/");
+  const isProtectedBleadAsset = decoded === "/Blead" || decoded.startsWith("/Blead/");
+  if (!PUBLIC_PAGE_PATHS.has(decoded) && !isPublicAsset && !isProtectedBleadAsset) return null;
   let relative = decoded.replace(/^\/+/, "");
   if (!relative || decoded.endsWith("/")) relative += "index.html";
   const target = resolve(ROOT, relative);
@@ -107,6 +141,9 @@ function serveFile(response, pathname, { noStore = false } = {}) {
 export function createBleadPrototypeServer({ password, secret }) {
   return createServer(async (request, response) => {
     try {
+      if (!isLoopbackHost(request.headers.host)) {
+        return send(response, 403, "Request not accepted.", { "Cache-Control": "no-store" });
+      }
       const url = requestUrl(request);
       const isBlead = url.pathname === "/Blead" || url.pathname.startsWith("/Blead/");
 
@@ -124,7 +161,8 @@ export function createBleadPrototypeServer({ password, secret }) {
         if (!(await securePasswordMatch(form.get("password") || "", password))) {
           await new Promise((resolveDelay) => setTimeout(resolveDelay, 350));
           const search = new URLSearchParams({ error: "1", returnTo });
-          return redirect(response, `/Blead/access/?${search}`);
+          if (returnHash) search.set("returnHash", returnHash);
+          return redirect(response, `/Blead/access/?${search}#access-error-noscript`);
         }
 
         const tokenValue = await signBleadSession({ expiresAt: Date.now() + SESSION_MS, secret });
@@ -160,7 +198,7 @@ function start() {
   loadLocalEnvironment();
   const password = process.env.BLEAD_PASSWORD;
   const secret = process.env.BLEAD_SESSION_SECRET;
-  if (!password || !secret) {
+  if (!isValidBleadConfiguration(password, secret)) {
     process.stderr.write("BLEAD_PASSWORD and BLEAD_SESSION_SECRET are required.\n");
     process.exitCode = 1;
     return;
