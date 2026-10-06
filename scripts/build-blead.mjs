@@ -12,6 +12,7 @@ const stateLabels = {
 
 const resourceLabels = {
   available: "Available to download",
+  external: "Assessment open",
   upcoming: "Coming soon",
   unavailable: "Temporarily unavailable",
 };
@@ -27,6 +28,7 @@ const approvedSectionFragments = new Set([
 const approvedPolicyPaths = new Set(["/privacy/", "/terms/"]);
 const approvedWeekStates = new Set(Object.keys(stateLabels));
 const approvedResourceStates = new Set(Object.keys(resourceLabels));
+const approvedAccessModes = new Set(["none", "download", "external"]);
 
 export function escapeHtml(value = "") {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -85,17 +87,21 @@ export function validatePublicContent(content, { downloadExists = defaultDownloa
     throw new Error("Every engagement resource must be marked as participant-facing content");
   }
   for (const resource of content.resources) {
-    if (!/^resource-[a-z0-9-]+$/u.test(resource.id) || !approvedResourceStates.has(resource.availability)) {
+    if (!/^resource-[a-z0-9-]+$/u.test(resource.id) || !approvedResourceStates.has(resource.availability) || !approvedAccessModes.has(resource.accessMode)) {
       throw new Error("Resource IDs and states must use approved values");
     }
     if (resource.availability === "available") {
+      if (resource.accessMode !== "download") throw new Error("An available material must use download access");
       if (!resource.publicUrl) throw new Error("An available material requires an approved download");
       assertApprovedDownloadPath(resource.publicUrl, "Material destination");
       if (!downloadExists(resource.publicUrl)) {
         throw new Error(`Material download file does not exist: ${resource.publicUrl}`);
       }
-    } else if (resource.publicUrl !== null) {
-      throw new Error("Only available materials can include a download destination");
+    } else if (resource.availability === "external") {
+      if (resource.accessMode !== "external") throw new Error("An external material must use external access");
+      assertApprovedAssessmentUrl(resource.publicUrl, "External material destination");
+    } else if (resource.publicUrl !== null || resource.accessMode !== "none") {
+      throw new Error("Inactive materials cannot include an access destination");
     }
   }
   const weekIds = new Set(content.weeks.map(({ id }) => id));
@@ -141,6 +147,13 @@ function renderList(items) {
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
+function renderInlineResource(resource) {
+  const title = resource.accessMode === "external"
+    ? renderEngagementLink(resource.publicUrl, resource.title)
+    : `<strong>${escapeHtml(resource.title)}</strong>`;
+  return `<div class="blead-inline-resource">${title}<span>${escapeHtml(resourceLabels[resource.availability])}</span></div>`;
+}
+
 function renderWeek(week, resources) {
   const isOpen = week.order === 1;
   const panelParts = [];
@@ -158,7 +171,7 @@ function renderWeek(week, resources) {
   }
   const related = resources.filter((resource) => week.resources.includes(resource.id));
   if (related.length) {
-    panelParts.push(`<section class="blead-week-detail"><h4>Materials</h4>${related.map((resource) => `<div class="blead-inline-resource"><strong>${escapeHtml(resource.title)}</strong><span>${escapeHtml(resourceLabels[resource.availability])}</span></div>`).join("")}</section>`);
+    panelParts.push(`<section class="blead-week-detail"><h4>Materials</h4>${related.map(renderInlineResource).join("")}</section>`);
   }
   if (week.nextWeekId) {
     panelParts.push(`<p class="blead-next-week"><a href="#${escapeHtml(week.nextWeekId)}">Continue to the next stage</a></p>`);
@@ -185,16 +198,18 @@ ${panel ? `    ${panel}\n` : ""}  </article>`;
 }
 
 function renderResource(resource) {
-  const downloadAction = resource.publicUrl
+  const resourceAction = resource.accessMode === "download"
     ? `    <a class="blead-resource-download" href="${escapeHtml(resource.publicUrl)}" download>Download material</a>\n`
-    : "";
+    : resource.accessMode === "external"
+      ? `    ${renderEngagementLink(resource.publicUrl, "Open assessment", { className: "blead-resource-download" })}\n`
+      : "";
 
   return `<article class="blead-resource" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
     <span class="blead-resource-type">${escapeHtml(resource.type)}</span>
     <h3>${escapeHtml(resource.title)}</h3>
     <p>${escapeHtml(resource.description)}</p>
     <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
-${downloadAction}  </article>`;
+${resourceAction}  </article>`;
 }
 
 function renderFaq(faq) {
@@ -204,12 +219,13 @@ function renderFaq(faq) {
   </article>`;
 }
 
-function renderEngagementLink(destination, label, { showArrow = false } = {}) {
+function renderEngagementLink(destination, label, { showArrow = false, className = "" } = {}) {
   const external = destination === approvedAssessmentUrl;
+  const classAttribute = className ? ` class="${escapeHtml(className)}"` : "";
   const attributes = external ? ' target="_blank" rel="noopener noreferrer"' : "";
   const arrow = showArrow ? ' <span aria-hidden="true">→</span>' : "";
   const newTabNote = external ? '<span class="sr-only"> (opens in a new tab)</span>' : "";
-  return `<a href="${escapeHtml(destination)}"${attributes}>${escapeHtml(label)}${arrow}${newTabNote}</a>`;
+  return `<a${classAttribute} href="${escapeHtml(destination)}"${attributes}>${escapeHtml(label)}${arrow}${newTabNote}</a>`;
 }
 
 export function renderBleadPage(content, options = {}) {

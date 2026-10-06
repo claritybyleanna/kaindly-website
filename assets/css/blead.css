@@ -551,6 +551,12 @@
   font-size: 0.88rem;
 }
 
+.blead-inline-resource a {
+  color: var(--blead-violet);
+  font-weight: 700;
+  text-underline-offset: 4px;
+}
+
 .blead-next-week {
   align-self: end;
   margin: 0;

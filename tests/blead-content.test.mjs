@@ -29,8 +29,20 @@ test("Bracco engagement content is role-based and limited to approved program fa
     "Stewardship and leadership",
     "Leadership closeout",
   ]);
+  assert.equal(bleadContent.usageSteps[3], "Check program updates for changes.");
   assert.ok(bleadContent.weeks.every(({ sample }) => sample === false));
-  assert.ok(bleadContent.resources.every(({ sample, publicUrl }) => sample === false && publicUrl === null));
+  assert.ok(bleadContent.resources.every(({ sample }) => sample === false));
+  assert.deepEqual(bleadContent.resources[0], {
+    id: "resource-kickoff",
+    type: "Assessment",
+    title: "AI Readiness Assessment",
+    description: "Complete the assessment before the first cohort session on October 7, 2026.",
+    weekId: "week-01",
+    availability: "external",
+    accessMode: "external",
+    publicUrl: "https://diagnostic.kaindly.ai",
+    sample: false,
+  });
   assert.equal(bleadContent.resources.some(({ type, title }) => /recording/i.test(`${type} ${title}`)), false);
 
   const serialized = JSON.stringify(bleadContent);
@@ -53,9 +65,14 @@ test("Blead generator rejects hostile or malformed destinations", async () => {
   assert.throws(() => renderBleadPage(hostileAssessment), /approved assessment/);
 
   const hostileDownload = structuredClone(bleadContent);
-  hostileDownload.resources[0].availability = "available";
-  hostileDownload.resources[0].publicUrl = "https://attacker.example/material.pdf";
+  hostileDownload.resources[1].availability = "available";
+  hostileDownload.resources[1].accessMode = "download";
+  hostileDownload.resources[1].publicUrl = "https://attacker.example/material.pdf";
   assert.throws(() => renderBleadPage(hostileDownload), /same-site download/);
+
+  const hostileExternalMaterial = structuredClone(bleadContent);
+  hostileExternalMaterial.resources[0].publicUrl = "https://attacker.example/assessment";
+  assert.throws(() => renderBleadPage(hostileExternalMaterial), /approved assessment/);
 
   const scriptedPolicy = structuredClone(bleadContent);
   scriptedPolicy.site.policyLinks[0].href = "javascript:alert(1)";
@@ -71,8 +88,9 @@ test("approved same-site materials render as real downloads only when available"
   const { renderBleadPage } = await import("../scripts/build-blead.mjs");
 
   const downloadable = structuredClone(bleadContent);
-  downloadable.resources[0].availability = "available";
-  downloadable.resources[0].publicUrl = "/Blead/materials/program-overview.pdf";
+  downloadable.resources[1].availability = "available";
+  downloadable.resources[1].accessMode = "download";
+  downloadable.resources[1].publicUrl = "/Blead/materials/program-overview.pdf";
   assert.throws(
     () => renderBleadPage(downloadable),
     /download file does not exist/,
@@ -84,7 +102,7 @@ test("approved same-site materials render as real downloads only when available"
   assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/materials\/program-overview\.pdf"[^>]+download[^>]*>Download material<\/a>/);
 
   const missingFile = structuredClone(downloadable);
-  missingFile.resources[0].publicUrl = null;
+  missingFile.resources[1].publicUrl = null;
   assert.throws(() => renderBleadPage(missingFile), /available material requires an approved download/);
 });
 
@@ -101,6 +119,8 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.match(html, /AI Leadership Accelerator/);
   assert.match(html, /October 7, 2026/);
   assert.match(html, /href="https:\/\/diagnostic\.kaindly\.ai"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
+  assert.match(html, /<h4>Materials<\/h4>[\s\S]*?<a[^>]+href="https:\/\/diagnostic\.kaindly\.ai"[^>]+>AI Readiness Assessment/);
+  assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="https:\/\/diagnostic\.kaindly\.ai"[^>]+>Open assessment/);
   assert.match(html, />Assessment open</);
   assert.match(html, />October 7, 2026</);
   assert.match(html, />Coming soon</);
@@ -196,6 +216,13 @@ test("Blead interactions keep disclosures, deep links, and filters accessible", 
   assert.equal(resourceMatches(resource, "reflection", "guide"), true);
   assert.equal(resourceMatches(resource, "slides", "guide"), false);
   assert.equal(resourceMatches(resource, "learning", "gui"), false);
+
+  const externalResource = {
+    dataset: { resourceState: "external", resourceType: "assessment" },
+    textContent: "AI Readiness Assessment Assessment open",
+  };
+  assert.equal(resourceMatches(externalResource, "", "available"), true);
+  assert.equal(resourceMatches(externalResource, "", "other"), false);
 
   const html = await readFile(new URL("../Blead/index.html", import.meta.url), "utf8");
   assert.match(html, /<script type="module" src="\/assets\/js\/blead\.js"/);

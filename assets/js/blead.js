@@ -33,9 +33,9 @@ export function resourceMatches(resourceElement, query = "", type = "all") {
   const state = resourceElement?.dataset?.resourceState ?? "";
   const matchesType = type === "all"
     || resourceType === type
-    || (type === "available" && state === "available")
+    || (type === "available" && ["available", "external"].includes(state))
     || (type === "upcoming" && state === "upcoming")
-    || (type === "other" && ["unavailable", "external"].includes(state));
+    || (type === "other" && state === "unavailable");
 
   return matchesType && terms.every((term) => text.includes(term));
 }

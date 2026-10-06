@@ -48,7 +48,7 @@ export const bleadContent = {
     "Complete the AI Readiness Assessment before Session 1.",
     "Review the engagement plan and open the stage you need.",
     "Download materials when they are marked available.",
-    "Check program updates for approved changes.",
+    "Check program updates for changes.",
   ],
   weeks: [
     {
@@ -174,13 +174,13 @@ export const bleadContent = {
   resources: [
     {
       id: "resource-kickoff",
-      type: "Getting started",
-      title: "Kickoff and readiness materials",
-      description: "Assessment guidance and kickoff materials will appear here when approved",
+      type: "Assessment",
+      title: "AI Readiness Assessment",
+      description: "Complete the assessment before the first cohort session on October 7, 2026.",
       weekId: "week-01",
-      availability: "upcoming",
-      accessMode: "none",
-      publicUrl: null,
+      availability: "external",
+      accessMode: "external",
+      publicUrl: "https://diagnostic.kaindly.ai",
       sample: false,
     },
     {
