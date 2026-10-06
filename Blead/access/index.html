@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Leadership Learning Hub Access | KAINDLY</title>
+  <meta name="description" content="Access the KAINDLY Leadership Learning Hub prototype.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/brand/icon-violet.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <link rel="stylesheet" href="../../assets/css/blead-access.css">
+  <script type="module" src="../../assets/js/blead-access.js"></script>
+</head>
+<body class="blead-access-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <main id="main-content" class="blead-access-shell">
+    <section class="blead-access-card" aria-labelledby="access-title">
+      <img class="blead-access-logo" src="../../assets/brand/logo-secondary-violet.svg" alt="KAINDLY" width="166" height="32">
+      <div class="blead-access-accent" aria-hidden="true"></div>
+      <p class="eyebrow">AI Leadership Program</p>
+      <h1 id="access-title">Enter the Leadership Learning Hub</h1>
+      <p class="blead-access-intro">Use the program password provided through your approved participant channel.</p>
+      <form method="post" action="/Blead/access/" data-blead-access-form>
+        <label for="program-password">Program password</label>
+        <input id="program-password" name="password" type="password" autocomplete="current-password" required>
+        <input name="returnTo" type="hidden" value="/Blead/">
+        <input name="returnHash" type="hidden" value="">
+        <button class="button" type="submit">Open the learning hub</button>
+      </form>
+      <p class="access-error" role="alert" aria-live="assertive" hidden data-access-error>
+        That password was not accepted. Check it and try again.
+      </p>
+      <p class="blead-access-note">This shared password provides access to general program information. Do not share it outside the approved participant group.</p>
+    </section>
+  </main>
+</body>
+</html>
