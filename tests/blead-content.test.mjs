@@ -124,6 +124,12 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.match(html, />Assessment open</);
   assert.match(html, />October 7, 2026</);
   assert.match(html, />Coming soon</);
+  assert.match(html, /class="blead-status blead-status--available blead-status--positive">Assessment open<\/span>/);
+  assert.match(html, /class="blead-status blead-status--upcoming blead-status--neutral">To be scheduled<\/span>/);
+  assert.match(html, /class="blead-inline-resource blead-inline-resource--positive"[^>]*>[\s\S]*?class="blead-inline-resource-status">Assessment open<\/span>/);
+  assert.match(html, /class="blead-inline-resource blead-inline-resource--neutral"[^>]*>[\s\S]*?class="blead-inline-resource-status">Coming soon<\/span>/);
+  assert.match(html, /class="blead-resource blead-resource--positive"[^>]*data-resource-state="external"/);
+  assert.match(html, /class="blead-resource blead-resource--neutral"[^>]*data-resource-state="upcoming"/);
   assert.match(html, /aria-expanded="true"[^>]+aria-controls="week-01-panel"/);
   assert.match(html, /id="week-01-panel"[^>]+aria-labelledby="week-01-heading"/);
   assert.match(html, /aria-expanded="false"[^>]+aria-controls="faq-start-panel"/);
@@ -254,6 +260,8 @@ test("Blead stylesheet preserves the KAINDLY system and narrow reflow", async ()
   assert.match(css, /\.blead-enhanced-control[^{]*\{[^}]*display:\s*none/s);
   assert.match(css, /\.blead-js\s+\.blead-enhanced-control[^{]*\{[^}]*display:\s*inline-flex/s);
   assert.match(css, /\.blead-status[^{]*\{[^}]*white-space:\s*normal/s);
+  assert.match(css, /\.blead-status--positive,[\s\S]*?\.blead-resource--positive \.blead-resource-status\s*\{[^}]*background:\s*var\(--blead-status-green-bg\)[^}]*color:\s*var\(--blead-status-green-text\)/s);
+  assert.match(css, /\.blead-status--neutral,[\s\S]*?\.blead-resource--neutral \.blead-resource-status\s*\{[^}]*background:\s*var\(--blead-status-gray-bg\)[^}]*color:\s*var\(--blead-status-gray-text\)/s);
   assert.match(css, /@media\s*\(max-width:\s*760px\)[\s\S]*grid-template-columns:\s*1fr/);
   assert.match(css, /@media\s*\(max-width:\s*360px\)/);
   assert.match(css, /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*scroll-behavior:\s*auto\s*!important/);

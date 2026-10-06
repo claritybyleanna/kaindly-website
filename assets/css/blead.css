@@ -9,6 +9,12 @@
   --blead-muted: #625f6b;
   --blead-border: #d8d2ee;
   --blead-surface: #fff;
+  --blead-status-green-bg: #eafac4;
+  --blead-status-green-border: #78a93f;
+  --blead-status-green-text: #31571d;
+  --blead-status-gray-bg: #efeff2;
+  --blead-status-gray-border: #b7b4bc;
+  --blead-status-gray-text: #625f68;
   --blead-radius: 5px;
   --blead-header-height: 82px;
 }
@@ -480,9 +486,20 @@
   white-space: normal;
 }
 
-.blead-status--upcoming {
-  border-color: #85818d;
-  color: #625f68;
+.blead-status--positive,
+.blead-inline-resource--positive .blead-inline-resource-status,
+.blead-resource--positive .blead-resource-status {
+  border-color: var(--blead-status-green-border);
+  background: var(--blead-status-green-bg);
+  color: var(--blead-status-green-text);
+}
+
+.blead-status--neutral,
+.blead-inline-resource--neutral .blead-inline-resource-status,
+.blead-resource--neutral .blead-resource-status {
+  border-color: var(--blead-status-gray-border);
+  background: var(--blead-status-gray-bg);
+  color: var(--blead-status-gray-text);
 }
 
 .blead-accordion-control {
@@ -546,7 +563,10 @@
   background: var(--blead-surface);
 }
 
-.blead-inline-resource span {
+.blead-inline-resource-status {
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--blead-radius);
   color: var(--blead-muted);
   font-size: 0.88rem;
 }
@@ -646,6 +666,7 @@
 .blead-resource-status {
   display: inline-block;
   padding: 7px 10px;
+  border: 1px solid transparent;
   border-radius: var(--blead-radius);
   background: var(--blead-periwinkle-soft);
   color: var(--blead-violet-deep);

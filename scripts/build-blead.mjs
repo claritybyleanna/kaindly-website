@@ -147,15 +147,25 @@ function renderList(items) {
   return `<ul>${items.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`;
 }
 
+function statusTone(state) {
+  if (["available", "external"].includes(state)) return "positive";
+  if (["upcoming", "unavailable"].includes(state)) return "neutral";
+  return "";
+}
+
 function renderInlineResource(resource) {
+  const tone = statusTone(resource.availability);
+  const toneClass = tone ? ` blead-inline-resource--${tone}` : "";
   const title = resource.accessMode === "external"
     ? renderEngagementLink(resource.publicUrl, resource.title)
     : `<strong>${escapeHtml(resource.title)}</strong>`;
-  return `<div class="blead-inline-resource">${title}<span>${escapeHtml(resourceLabels[resource.availability])}</span></div>`;
+  return `<div class="blead-inline-resource${toneClass}" data-resource-state="${escapeHtml(resource.availability)}">${title}<span class="blead-inline-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span></div>`;
 }
 
 function renderWeek(week, resources) {
   const isOpen = week.order === 1;
+  const tone = statusTone(week.state);
+  const toneClass = tone ? ` blead-status--${tone}` : "";
   const panelParts = [];
   if (week.focus) {
     panelParts.push(`<section class="blead-week-detail"><h4>Focus</h4><p>${escapeHtml(week.focus)}</p></section>`);
@@ -191,20 +201,22 @@ function renderWeek(week, resources) {
         <p>${escapeHtml(week.summary)}</p>
       </div>
       <div class="blead-week-actions">
-        <span class="blead-status blead-status--${escapeHtml(week.state)}">${escapeHtml(week.statusLabel || stateLabels[week.state])}</span>
+        <span class="blead-status blead-status--${escapeHtml(week.state)}${toneClass}">${escapeHtml(week.statusLabel || stateLabels[week.state])}</span>
 ${disclosure ? `        ${disclosure}\n` : ""}      </div>
     </div>
 ${panel ? `    ${panel}\n` : ""}  </article>`;
 }
 
 function renderResource(resource) {
+  const tone = statusTone(resource.availability);
+  const toneClass = tone ? ` blead-resource--${tone}` : "";
   const resourceAction = resource.accessMode === "download"
     ? `    <a class="blead-resource-download" href="${escapeHtml(resource.publicUrl)}" download>Download material</a>\n`
     : resource.accessMode === "external"
       ? `    ${renderEngagementLink(resource.publicUrl, "Open assessment", { className: "blead-resource-download" })}\n`
       : "";
 
-  return `<article class="blead-resource" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
+  return `<article class="blead-resource${toneClass}" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
     <span class="blead-resource-type">${escapeHtml(resource.type)}</span>
     <h3>${escapeHtml(resource.title)}</h3>
     <p>${escapeHtml(resource.description)}</p>
