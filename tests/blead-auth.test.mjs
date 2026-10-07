@@ -2,14 +2,20 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   BLEAD_COOKIE_NAME,
+  BLEAD_FACILITATOR_COOKIE_NAME,
   clearBleadSession,
+  clearBleadFacilitatorSession,
   isValidBleadConfiguration,
   readCookie,
   sanitizeBleadReturnTo,
+  sanitizeBleadFacilitatorReturnTo,
   securePasswordMatch,
   serializeBleadSession,
+  serializeBleadFacilitatorSession,
   signBleadSession,
+  signBleadFacilitatorSession,
   verifyBleadSession,
+  verifyBleadFacilitatorSession,
 } from "../lib/blead-auth.js";
 
 test("Blead configuration requires a distinct 32-byte signing secret", async () => {
@@ -47,6 +53,35 @@ test("cookie helpers scope and clear the Blead session", () => {
   assert.equal(readCookie(`${cookie}; another=value`, BLEAD_COOKIE_NAME), "signed-token");
   assert.equal(readCookie(null, BLEAD_COOKIE_NAME), undefined);
   assert.match(clearBleadSession({ secure: true }), /Max-Age=0/);
+});
+
+test("facilitator sessions cannot be substituted with participant sessions", async () => {
+  const secret = "facilitator-secret-with-adequate-length";
+  const facilitator = await signBleadFacilitatorSession({ expiresAt: 20_000, secret });
+  const participant = await signBleadSession({ expiresAt: 20_000, secret });
+  assert.equal(await verifyBleadFacilitatorSession(facilitator, secret, 10_000), true);
+  assert.equal(await verifyBleadFacilitatorSession(participant, secret, 10_000), false);
+});
+
+test("facilitator cookies are HTTP-only and narrowly scoped", () => {
+  const cookie = serializeBleadFacilitatorSession("token", { secure: true, maxAge: 14_400 });
+  assert.match(cookie, new RegExp(`^${BLEAD_FACILITATOR_COOKIE_NAME}=token`));
+  assert.match(cookie, /Path=\/Blead\/facilitator\//);
+  assert.match(cookie, /HttpOnly/);
+  assert.match(cookie, /Secure/);
+  assert.match(cookie, /SameSite=Strict/);
+  assert.match(clearBleadFacilitatorSession({ secure: true }), /Max-Age=0/);
+});
+
+test("facilitator return destinations stay inside the facilitator tree", () => {
+  assert.equal(sanitizeBleadFacilitatorReturnTo("/Blead/facilitator/"), "/Blead/facilitator/");
+  assert.equal(
+    sanitizeBleadFacilitatorReturnTo("/Blead/facilitator/responses/"),
+    "/Blead/facilitator/responses/",
+  );
+  assert.equal(sanitizeBleadFacilitatorReturnTo("/Blead/"), "/Blead/facilitator/");
+  assert.equal(sanitizeBleadFacilitatorReturnTo("/Blead/facilitator/../"), "/Blead/facilitator/");
+  assert.equal(sanitizeBleadFacilitatorReturnTo("//attacker.example"), "/Blead/facilitator/");
 });
 
 test("return destinations cannot leave the protected route", () => {
