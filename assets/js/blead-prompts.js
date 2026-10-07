@@ -1,3 +1,5 @@
+import { initializePromptSync } from "./blead-prompt-sync.js";
+
 const STORAGE_PREFIX = "kaindly:blead:session-1";
 
 function storageKey(promptId, fieldId) {
@@ -80,6 +82,15 @@ function initializePrompt(card, documentRoot, storage) {
     });
   }
 
+  card.addEventListener("blead:hydrate", () => {
+    fields.forEach((field) => {
+      saveExerciseValue(storage, promptId, field.dataset.promptField, field.value);
+    });
+    if (notes) saveExerciseValue(storage, promptId, "notes", notes.value);
+    refreshPreview();
+    if (noteStatus) noteStatus.textContent = "Exercise restored on this device.";
+  });
+
   copyButton?.addEventListener("click", async () => {
     const promptText = compilePrompt(template, replacements());
     try {
@@ -105,6 +116,7 @@ export function initializePromptWorkbook(documentRoot = globalThis.document, sto
   documentRoot.querySelectorAll("[data-prompt-card]").forEach((card) => {
     initializePrompt(card, documentRoot, storage);
   });
+  return initializePromptSync({ documentRoot, storage });
 }
 
 if (typeof document !== "undefined") initializePromptWorkbook(document);

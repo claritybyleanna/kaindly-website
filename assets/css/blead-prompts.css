@@ -121,6 +121,30 @@
   margin-top: 44px;
 }
 
+.blead-sync-disclosure {
+  display: grid;
+  gap: 8px;
+  padding: 18px 20px;
+  margin-top: 28px;
+  border: 1px solid var(--blead-border);
+  border-left: 6px solid var(--blead-violet);
+  border-radius: var(--blead-radius);
+  background: var(--blead-periwinkle-pale);
+}
+
+.blead-sync-disclosure p {
+  margin: 0;
+  color: var(--blead-muted);
+  line-height: 1.55;
+}
+
+.blead-sync-disclosure .blead-sync-status {
+  min-height: 1.4em;
+  color: var(--blead-violet);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .blead-prompt-card {
   overflow: clip;
   border: 1px solid var(--blead-border);

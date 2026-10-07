@@ -52,7 +52,7 @@ function renderPrompt(prompt) {
         </section>
         ${renderExample(prompt)}
         <p class="blead-prompt-tip"><strong>Tip:</strong> ${escapeHtml(prompt.tip)}</p>
-        <label class="blead-prompt-notes"><span>Your private notes</span><textarea rows="4" data-prompt-notes placeholder="Capture what you want to remember from this exercise."></textarea><small>Saved only in this browser on this device.</small><span class="blead-prompt-status" role="status" aria-live="polite" data-note-status></span></label>
+        <label class="blead-prompt-notes"><span>Exercise notes</span><textarea rows="4" data-prompt-notes placeholder="Capture what you want to remember from this exercise."></textarea><small>Saved on this device and synced to KAINDLY when connected.</small><span class="blead-prompt-status" role="status" aria-live="polite" data-note-status></span></label>
       </div>
     </details>
   </article>`;
@@ -111,6 +111,10 @@ export function renderBleadPromptPack(content) {
     <section class="blead-section blead-section--tinted" id="prompts" aria-labelledby="prompts-title">
       <div class="blead-shell">
         <div class="blead-section-heading"><div><p class="blead-kicker">Session 1 workbook</p><h2 id="prompts-title">Build your AI operating system</h2></div><p>Open an exercise, complete any personalization fields, then copy the finished prompt into Microsoft Copilot.</p></div>
+        <aside class="blead-sync-disclosure" aria-label="Response privacy and retention">
+          <p>Your entries are automatically saved under an anonymous participant ID and are visible only to KAINDLY facilitators. Do not enter personal, patient, regulated, confidential, or otherwise restricted information. Responses are retained through February 28, 2027.</p>
+          <p class="blead-sync-status" role="status" aria-live="polite" data-sync-status>Responses save automatically as you work.</p>
+        </aside>
         <div class="blead-prompt-list">${content.prompts.map(renderPrompt).join("")}</div>
       </div>
     </section>

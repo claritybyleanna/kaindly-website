@@ -27,6 +27,13 @@ test("Session 1 prompt pack is a protected interactive workbook", async () => {
   assert.match(html, /action="\/Blead\/logout\/"/);
   assert.match(html, /src="\/assets\/js\/blead-prompts\.js"/);
   assert.match(html, /href="\/assets\/css\/blead-prompts\.css"/);
+  assert.match(visibleText, /entries are automatically saved under an anonymous participant ID/i);
+  assert.match(visibleText, /visible only to KAINDLY facilitators/i);
+  assert.match(visibleText, /retained through February 28, 2027/i);
+  assert.match(visibleText, /Exercise notes/);
+  assert.match(visibleText, /Saved on this device and synced to KAINDLY when connected\./);
+  assert.match(html, /data-sync-status/);
+  assert.doesNotMatch(visibleText, /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu);
 
   const { promptPackContent } = await import("../Blead/session-1-prompts/content.js");
   const { renderBleadPromptPack } = await import("../scripts/build-blead-prompts.mjs");
@@ -47,7 +54,7 @@ test("Session 1 prompt pack is a protected interactive workbook", async () => {
   assert.equal(html, renderBleadPromptPack(promptPackContent));
 });
 
-test("prompt exercises compile personalized copy and persist only in local storage", async () => {
+test("prompt exercises compile personalized copy and keep a local-first copy", async () => {
   assert.equal(
     existsSync(new URL("../assets/js/blead-prompts.js", import.meta.url)),
     true,
@@ -88,4 +95,8 @@ test("prompt exercises compile personalized copy and persist only in local stora
   const copied = [];
   await copyPrompt({ writeText(value) { copied.push(value); return Promise.resolve(); } }, "Personalized prompt");
   assert.deepEqual(copied, ["Personalized prompt"]);
+
+  const source = await readFile(new URL("../assets/js/blead-prompts.js", import.meta.url), "utf8");
+  assert.match(source, /initializePromptSync/);
+  assert.match(source, /blead:hydrate/);
 });
