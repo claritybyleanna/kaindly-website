@@ -115,7 +115,14 @@ test("the access page preserves safe nested workbook destinations", async () => 
 });
 
 async function withBleadEnvironment(values, run) {
-  const keys = ["VERCEL_ENV", "VERCEL_TARGET_ENV", "BLEAD_PASSWORD", "BLEAD_SESSION_SECRET"];
+  const keys = [
+    "VERCEL_ENV",
+    "VERCEL_TARGET_ENV",
+    "BLEAD_PASSWORD",
+    "BLEAD_SESSION_SECRET",
+    "BLEAD_FACILITATOR_PASSWORD",
+    "BLEAD_FACILITATOR_SESSION_SECRET",
+  ];
   const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
   for (const key of keys) {
     if (values[key] === undefined) delete process.env[key];
@@ -255,5 +262,105 @@ test("Blead logout clears the scoped session", async () => {
     assert.equal(response.status, 303);
     assert.equal(response.headers.get("location"), "/Blead/access/");
     assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
+  });
+});
+
+const facilitatorEnvironment = {
+  ...testEnvironment,
+  BLEAD_FACILITATOR_PASSWORD: "test-facilitator-password",
+  BLEAD_FACILITATOR_SESSION_SECRET: "facilitator-test-secret-with-adequate-length",
+};
+
+test("facilitator routes require their own valid session", async () => {
+  const { default: middleware, isFacilitatorPath } = await import("../middleware.js");
+  await withBleadEnvironment(facilitatorEnvironment, async () => {
+    assert.equal(isFacilitatorPath("/Blead/facilitator/"), true);
+    assert.equal(isFacilitatorPath("/Blead/session-1-prompts/"), false);
+
+    const missing = await middleware(new Request("https://www.kaindly.ai/Blead/facilitator/"));
+    assert.equal(missing.status, 303);
+    assert.equal(new URL(missing.headers.get("location")).pathname, "/Blead/facilitator/access/");
+
+    const participant = await signBleadSession({
+      expiresAt: Date.now() + 60_000,
+      secret: facilitatorEnvironment.BLEAD_SESSION_SECRET,
+    });
+    const participantOnly = await middleware(new Request(
+      "https://www.kaindly.ai/Blead/facilitator/",
+      { headers: { cookie: `${BLEAD_COOKIE_NAME}=${participant}` } },
+    ));
+    assert.equal(participantOnly.status, 303);
+
+    const facilitator = await signBleadFacilitatorSession({
+      expiresAt: Date.now() + 60_000,
+      secret: facilitatorEnvironment.BLEAD_FACILITATOR_SESSION_SECRET,
+    });
+    const accepted = await middleware(new Request(
+      "https://www.kaindly.ai/Blead/facilitator/",
+      { headers: { cookie: `${BLEAD_FACILITATOR_COOKIE_NAME}=${facilitator}` } },
+    ));
+    assert.equal(accepted.headers.get("x-middleware-next"), "1");
+  });
+});
+
+test("facilitator access sets only the facilitator cookie and hides the password", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(facilitatorEnvironment, async () => {
+    const body = new URLSearchParams({
+      password: facilitatorEnvironment.BLEAD_FACILITATOR_PASSWORD,
+      returnTo: "/Blead/facilitator/",
+    });
+    const response = await middleware(new Request(
+      "https://www.kaindly.ai/Blead/facilitator/access/",
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/x-www-form-urlencoded",
+          origin: "https://www.kaindly.ai",
+        },
+        body,
+      },
+    ));
+
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/Blead/facilitator/");
+    assert.match(response.headers.get("set-cookie"), new RegExp(`^${BLEAD_FACILITATOR_COOKIE_NAME}=`));
+    assert.doesNotMatch(response.headers.get("set-cookie"), new RegExp(BLEAD_COOKIE_NAME));
+    assert.doesNotMatch(
+      `${response.headers.get("location")}${response.headers.get("set-cookie")}`,
+      /test-facilitator-password/u,
+    );
+  });
+});
+
+test("facilitator logout clears only its narrowly scoped cookie", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(facilitatorEnvironment, async () => {
+    const response = await middleware(new Request(
+      "https://www.kaindly.ai/Blead/facilitator/logout/",
+      { method: "POST", headers: { origin: "https://www.kaindly.ai" } },
+    ));
+    assert.equal(response.status, 303);
+    assert.equal(response.headers.get("location"), "/Blead/facilitator/access/");
+    assert.match(response.headers.get("set-cookie"), new RegExp(`^${BLEAD_FACILITATOR_COOKIE_NAME}=`));
+    assert.match(response.headers.get("set-cookie"), /Max-Age=0/u);
+    assert.doesNotMatch(response.headers.get("set-cookie"), new RegExp(`^${BLEAD_COOKIE_NAME}=`));
+  });
+});
+
+test("missing facilitator configuration fails closed without breaking participant pages", async () => {
+  const { default: middleware } = await import("../middleware.js");
+  await withBleadEnvironment(testEnvironment, async () => {
+    const facilitator = await middleware(new Request("https://www.kaindly.ai/Blead/facilitator/"));
+    assert.equal(facilitator.status, 503);
+
+    const participant = await signBleadSession({
+      expiresAt: Date.now() + 60_000,
+      secret: testEnvironment.BLEAD_SESSION_SECRET,
+    });
+    const hub = await middleware(new Request("https://www.kaindly.ai/Blead/", {
+      headers: { cookie: `${BLEAD_COOKIE_NAME}=${participant}` },
+    }));
+    assert.equal(hub.headers.get("x-middleware-next"), "1");
   });
 });

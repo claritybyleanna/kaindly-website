@@ -1,18 +1,25 @@
 import { next } from "@vercel/functions";
 import {
   BLEAD_COOKIE_NAME,
+  BLEAD_FACILITATOR_COOKIE_NAME,
+  clearBleadFacilitatorSession,
   clearBleadSession,
   isValidBleadConfiguration,
   readCookie,
+  sanitizeBleadFacilitatorReturnTo,
   sanitizeBleadReturnTo,
   securePasswordMatch,
+  serializeBleadFacilitatorSession,
   serializeBleadSession,
+  signBleadFacilitatorSession,
   signBleadSession,
+  verifyBleadFacilitatorSession,
   verifyBleadSession,
 } from "./lib/blead-auth.js";
 
 const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
 const BLEAD_SESSION_MS = 8 * 60 * 60 * 1000;
+const BLEAD_FACILITATOR_SESSION_MS = 4 * 60 * 60 * 1000;
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
@@ -185,6 +192,10 @@ export function isProtectedBleadPath(pathname) {
   return pathname === "/Blead" || pathname.startsWith("/Blead/");
 }
 
+export function isFacilitatorPath(pathname) {
+  return pathname === "/Blead/facilitator" || pathname.startsWith("/Blead/facilitator/");
+}
+
 function redirect(location, headers = {}) {
   return new Response(null, {
     status: 303,
@@ -245,6 +256,53 @@ export async function handleBleadAccess(
   });
 }
 
+export async function handleBleadFacilitatorAccess(
+  request,
+  { password, secret, now = Date.now(), failureDelayMs = 350 } = {},
+) {
+  const url = new URL(request.url);
+  if (!isSameOriginPost(request, url)) {
+    return new Response("Request not accepted.", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  const formData = await request.formData();
+  const candidate = String(formData.get("password") ?? "");
+  const returnTo = sanitizeBleadFacilitatorReturnTo(String(formData.get("returnTo") ?? ""));
+
+  if (!(await securePasswordMatch(candidate, password))) {
+    await new Promise((resolve) => setTimeout(resolve, failureDelayMs));
+    const accessUrl = new URL("/Blead/facilitator/access/", url);
+    accessUrl.searchParams.set("error", "1");
+    accessUrl.searchParams.set("returnTo", returnTo);
+    accessUrl.hash = "access-error-noscript";
+    return redirect(accessUrl);
+  }
+
+  const token = await signBleadFacilitatorSession({
+    expiresAt: now + BLEAD_FACILITATOR_SESSION_MS,
+    secret,
+  });
+  return redirect(returnTo, {
+    "Set-Cookie": serializeBleadFacilitatorSession(token, {
+      secure: url.protocol === "https:",
+    }),
+  });
+}
+
+function unavailable(message) {
+  return new Response(message, {
+    status: 503,
+    headers: {
+      "Cache-Control": "no-store",
+      "Content-Type": "text/plain; charset=utf-8",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}
+
 export default async function maintenanceMiddleware(
   request = new Request("https://www.kaindly.ai/"),
 ) {
@@ -253,17 +311,52 @@ export default async function maintenanceMiddleware(
   const url = new URL(request.url);
   if (!isProtectedBleadPath(url.pathname)) return next();
 
+  if (isFacilitatorPath(url.pathname)) {
+    const facilitatorPassword = process.env.BLEAD_FACILITATOR_PASSWORD;
+    const facilitatorSecret = process.env.BLEAD_FACILITATOR_SESSION_SECRET;
+    if (!isValidBleadConfiguration(facilitatorPassword, facilitatorSecret)) {
+      return unavailable("Facilitator access is temporarily unavailable.");
+    }
+
+    const isAccessPath = url.pathname === "/Blead/facilitator/access/"
+      || url.pathname === "/Blead/facilitator/access";
+    if (isAccessPath) {
+      if (request.method === "POST") {
+        return handleBleadFacilitatorAccess(request, {
+          password: facilitatorPassword,
+          secret: facilitatorSecret,
+        });
+      }
+      const token = readCookie(
+        request.headers.get("cookie"),
+        BLEAD_FACILITATOR_COOKIE_NAME,
+      );
+      return (await verifyBleadFacilitatorSession(token, facilitatorSecret))
+        ? redirect("/Blead/facilitator/")
+        : nextProtected();
+    }
+
+    if (url.pathname === "/Blead/facilitator/logout/" && isSameOriginPost(request, url)) {
+      return redirect("/Blead/facilitator/access/", {
+        "Set-Cookie": clearBleadFacilitatorSession({ secure: url.protocol === "https:" }),
+      });
+    }
+
+    const token = readCookie(
+      request.headers.get("cookie"),
+      BLEAD_FACILITATOR_COOKIE_NAME,
+    );
+    if (await verifyBleadFacilitatorSession(token, facilitatorSecret)) return nextProtected();
+
+    const accessUrl = new URL("/Blead/facilitator/access/", url);
+    accessUrl.searchParams.set("returnTo", url.pathname + url.search);
+    return redirect(accessUrl);
+  }
+
   const password = process.env.BLEAD_PASSWORD;
   const secret = process.env.BLEAD_SESSION_SECRET;
   if (!isValidBleadConfiguration(password, secret)) {
-    return new Response("This learning hub is temporarily unavailable.", {
-      status: 503,
-      headers: {
-        "Cache-Control": "no-store",
-        "Content-Type": "text/plain; charset=utf-8",
-        "X-Robots-Tag": "noindex, nofollow",
-      },
-    });
+    return unavailable("This learning hub is temporarily unavailable.");
   }
 
   if (url.pathname === "/Blead/access/" || url.pathname === "/Blead/access") {

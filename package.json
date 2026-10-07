@@ -8,7 +8,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "build:blead": "node scripts/build-blead.mjs && node scripts/build-blead-prompts.mjs",
+    "build:blead": "node scripts/build-blead.mjs && node scripts/build-blead-prompts.mjs && node scripts/build-blead-facilitator.mjs",
     "migrate:blead": "node --env-file=.env.local scripts/migrate-blead-db.mjs",
     "test": "node --test tests/*.test.mjs",
     "prototype:blead": "npm run build:blead && node scripts/blead-prototype-server.mjs"
