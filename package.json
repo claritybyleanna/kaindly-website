@@ -4,12 +4,17 @@
   "private": true,
   "type": "module",
   "description": "The official Kaindly website.",
+  "engines": {
+    "node": "24.x"
+  },
   "scripts": {
     "build:blead": "node scripts/build-blead.mjs && node scripts/build-blead-prompts.mjs",
+    "migrate:blead": "node --env-file=.env.local scripts/migrate-blead-db.mjs",
     "test": "node --test tests/*.test.mjs",
     "prototype:blead": "npm run build:blead && node scripts/blead-prototype-server.mjs"
   },
   "dependencies": {
+    "@neondatabase/serverless": "^1.2.0",
     "@vercel/functions": "3.9.3"
   }
 }
