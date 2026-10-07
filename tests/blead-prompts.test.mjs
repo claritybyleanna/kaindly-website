@@ -27,11 +27,11 @@ test("Session 1 prompt pack is a protected interactive workbook", async () => {
   assert.match(html, /action="\/Blead\/logout\/"/);
   assert.match(html, /src="\/assets\/js\/blead-prompts\.js"/);
   assert.match(html, /href="\/assets\/css\/blead-prompts\.css"/);
-  assert.match(visibleText, /entries are automatically saved under an anonymous participant ID/i);
-  assert.match(visibleText, /visible only to KAINDLY facilitators/i);
   assert.match(visibleText, /retained through February 28, 2027/i);
-  assert.match(visibleText, /Exercise notes/);
-  assert.match(visibleText, /Saved on this device and synced to KAINDLY when connected\./);
+  assert.match(visibleText, /Your private notes/);
+  assert.match(visibleText, /Saved only in this browser on this device\./);
+  assert.doesNotMatch(visibleText, /visible only to KAINDLY facilitators/i);
+  assert.doesNotMatch(visibleText, /Do not enter personal, patient, regulated/i);
   assert.match(html, /data-sync-status/);
   assert.doesNotMatch(visibleText, /[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/iu);
 
