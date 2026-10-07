@@ -90,6 +90,99 @@
   gap: 18px;
 }
 
+.blead-response-card {
+  overflow: hidden;
+  border: 1px solid var(--blead-border);
+  border-radius: var(--blead-radius);
+  background: var(--blead-surface);
+  box-shadow: 0 14px 34px rgba(65, 48, 139, 0.07);
+}
+
+.blead-response-card-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 20px;
+  align-items: center;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--blead-border);
+}
+
+.blead-response-card-header h3,
+.blead-response-card-header p {
+  margin: 0;
+}
+
+.blead-response-card-header h3 {
+  color: var(--blead-violet);
+  font-size: 1.35rem;
+}
+
+.blead-response-card-header time {
+  grid-column: 1 / -1;
+  color: var(--blead-muted);
+  font-size: 0.9rem;
+}
+
+.blead-response-completion {
+  color: var(--blead-muted);
+  font-weight: 700;
+}
+
+.blead-response-exercise + .blead-response-exercise {
+  border-top: 1px solid var(--blead-border);
+}
+
+.blead-response-exercise summary {
+  padding: 16px 24px;
+  background: var(--blead-periwinkle-pale);
+  color: var(--blead-violet);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.blead-response-exercise-body {
+  display: grid;
+  gap: 20px;
+  padding: 22px 24px;
+}
+
+.blead-response-fields {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+}
+
+.blead-response-fields div {
+  display: grid;
+  grid-template-columns: minmax(150px, 0.34fr) 1fr;
+  gap: 18px;
+}
+
+.blead-response-fields dt {
+  font-weight: 700;
+}
+
+.blead-response-fields dd {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.blead-response-notes {
+  padding: 16px;
+  border-left: 5px solid var(--blead-violet);
+  background: var(--blead-periwinkle-pale);
+}
+
+.blead-response-notes h4,
+.blead-response-notes p {
+  margin: 0;
+}
+
+.blead-response-notes p {
+  margin-top: 6px;
+  white-space: pre-wrap;
+}
+
 @media (max-width: 760px) {
   .blead-facilitator-heading {
     align-items: stretch;
@@ -98,5 +191,10 @@
 
   .blead-facilitator-heading .blead-button {
     width: 100%;
+  }
+
+  .blead-response-card-header,
+  .blead-response-fields div {
+    grid-template-columns: 1fr;
   }
 }

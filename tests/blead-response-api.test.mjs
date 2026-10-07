@@ -232,7 +232,12 @@ test("valid facilitator sessions can read anonymous response rows", async () => 
   const response = await handlers.GET(await facilitatorRequest());
 
   assert.equal(response.status, 200);
-  assert.deepEqual((await response.json()).responses, facilitatorRows);
+  const body = await response.json();
+  assert.equal(body.responses[0].exercise_title, "The Master Prompt: Build Your AI Operating System");
+  assert.equal(body.responses[0].exercise_number, 1);
+  assert.deepEqual(body.responses[0].fields, [{ id: "title", label: "Your title", value: "VP" }]);
+  assert.equal(body.responses[0].notes, "Facilitator view");
+  assert.equal(body.responses[0].payload, undefined);
   assert.equal(response.headers.get("cache-control"), "private, no-store");
 });
 
