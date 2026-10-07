@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/Blead/api/responses",
+      "destination": "/api/blead-responses"
+    }
+  ]
+}
