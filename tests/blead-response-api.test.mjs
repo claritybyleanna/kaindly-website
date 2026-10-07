@@ -10,6 +10,7 @@ import { BLEAD_DELETE_AFTER } from "../lib/blead-response-domain.js";
 import {
   createFacilitatorHandlers,
   createParticipantResponseHandlers,
+  createRetentionHandler,
 } from "../lib/blead-response-api.js";
 
 const secret = "participant-api-test-secret-with-adequate-length";
@@ -311,4 +312,79 @@ test("facilitator database failures remain generic and payload-free", async () =
   assert.deepEqual(await response.json(), { error: "Unable to load responses" });
   assert.match(logText, /facilitator_database_read/u);
   assert.doesNotMatch(logText, /secret content|75f6c553/iu);
+});
+
+async function withCronSecret(value, run) {
+  const previous = process.env.CRON_SECRET;
+  if (value === undefined) delete process.env.CRON_SECRET;
+  else process.env.CRON_SECRET = value;
+  try {
+    return await run();
+  } finally {
+    if (previous === undefined) delete process.env.CRON_SECRET;
+    else process.env.CRON_SECRET = previous;
+  }
+}
+
+test("retention cleanup rejects missing, malformed, and incorrect bearer secrets", async () => {
+  const GET = createRetentionHandler({
+    store: { deleteExpired: async () => [] },
+    now: () => new Date(BLEAD_DELETE_AFTER),
+  });
+  await withCronSecret(undefined, async () => {
+    assert.equal((await GET(new Request("https://www.kaindly.ai/api/blead-retention"))).status, 401);
+  });
+  await withCronSecret("cron-test-secret", async () => {
+    const missing = new Request("https://www.kaindly.ai/api/blead-retention");
+    const wrong = new Request("https://www.kaindly.ai/api/blead-retention", {
+      headers: { authorization: "Bearer wrong" },
+    });
+    const malformed = new Request("https://www.kaindly.ai/api/blead-retention", {
+      headers: { authorization: "cron-test-secret" },
+    });
+    assert.equal((await GET(missing)).status, 401);
+    assert.equal((await GET(wrong)).status, 401);
+    assert.equal((await GET(malformed)).status, 401);
+  });
+});
+
+test("retention cleanup is inactive until the exact deadline", async () => {
+  let deleteCalls = 0;
+  const GET = createRetentionHandler({
+    store: { deleteExpired: async () => { deleteCalls += 1; return []; } },
+    now: () => new Date("2027-03-01T05:59:59.999Z"),
+  });
+
+  await withCronSecret("cron-test-secret", async () => {
+    const response = await GET(new Request("https://www.kaindly.ai/api/blead-retention", {
+      headers: { authorization: "Bearer cron-test-secret" },
+    }));
+    assert.equal(response.status, 200);
+    assert.deepEqual(await response.json(), { ok: true, deleted: 0, active: true });
+    assert.equal(deleteCalls, 0);
+  });
+});
+
+test("retention cleanup deletes at the deadline and safely repeats", async () => {
+  const calls = [];
+  const batches = [[{ participant_id: participantId }], []];
+  const GET = createRetentionHandler({
+    store: { deleteExpired: async (value) => (calls.push(value), batches.shift()) },
+    now: () => new Date(BLEAD_DELETE_AFTER),
+  });
+
+  await withCronSecret("cron-test-secret", async () => {
+    const request = () => new Request("https://www.kaindly.ai/api/blead-retention", {
+      headers: { authorization: "Bearer cron-test-secret" },
+    });
+    const first = await GET(request());
+    const second = await GET(request());
+    const firstText = await first.text();
+    const secondText = await second.text();
+
+    assert.deepEqual(JSON.parse(firstText), { ok: true, deleted: 1, active: false });
+    assert.deepEqual(JSON.parse(secondText), { ok: true, deleted: 0, active: false });
+    assert.deepEqual(calls, [BLEAD_DELETE_AFTER, BLEAD_DELETE_AFTER]);
+    assert.doesNotMatch(`${firstText}${secondText}`, /75f6c553/iu);
+  });
 });

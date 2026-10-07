@@ -13,5 +13,11 @@
       "source": "/Blead/api/responses",
       "destination": "/api/blead-responses"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/blead-retention",
+      "schedule": "0 9 * * *"
+    }
   ]
 }
