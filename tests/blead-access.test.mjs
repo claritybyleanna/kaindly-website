@@ -33,6 +33,8 @@ async function startTestServer() {
       ...process.env,
       BLEAD_PASSWORD: "test-password",
       BLEAD_SESSION_SECRET: "test-session-secret-with-adequate-length",
+      BLEAD_FACILITATOR_PASSWORD: "test-facilitator-password",
+      BLEAD_FACILITATOR_SESSION_SECRET: "test-facilitator-secret-with-adequate-length",
       BLEAD_PORT: "0",
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -153,6 +155,72 @@ test("local prototype server enforces the Blead access contract", async () => {
       redirect: "manual",
     });
     assert.equal(protectedContent.status, 200);
+
+    const participantId = "75f6c553-4bb4-4b3e-9a2a-ef29f1b64930";
+    const savedResponse = await fetch(`${base}/Blead/api/responses`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: cookie.split(";", 1)[0],
+        origin: base,
+      },
+      body: JSON.stringify({
+        participantId,
+        exerciseId: "prompt-01",
+        fields: { title: "=HYPERLINK(\"bad\")", team: "Analytics" },
+        notes: "Anonymous local integration note",
+      }),
+    });
+    assert.equal(savedResponse.status, 200);
+
+    const participantAtFacilitator = await fetch(`${base}/Blead/facilitator/`, {
+      headers: { cookie: cookie.split(";", 1)[0] },
+      redirect: "manual",
+    });
+    assert.equal(participantAtFacilitator.status, 303);
+    assert.equal(
+      new URL(participantAtFacilitator.headers.get("location"), base).pathname,
+      "/Blead/facilitator/access/",
+    );
+
+    const facilitatorLogin = await fetch(`${base}/Blead/facilitator/access/`, {
+      method: "POST",
+      redirect: "manual",
+      headers: { "content-type": "application/x-www-form-urlencoded", origin: base },
+      body: new URLSearchParams({
+        password: "test-facilitator-password",
+        returnTo: "/Blead/facilitator/",
+      }),
+    });
+    assert.equal(facilitatorLogin.status, 303);
+    const facilitatorCookie = facilitatorLogin.headers.get("set-cookie").split(";", 1)[0];
+    assert.match(facilitatorCookie, /^kaindly_blead_facilitator_session=/u);
+
+    const dashboard = await fetch(`${base}/Blead/facilitator/`, {
+      headers: { cookie: facilitatorCookie },
+    });
+    assert.equal(dashboard.status, 200);
+    assert.equal(dashboard.headers.get("cache-control"), "no-store");
+    assert.equal(dashboard.headers.get("x-robots-tag"), "noindex, nofollow");
+
+    const facilitatorData = await fetch(`${base}/Blead/facilitator/api/responses`, {
+      headers: { cookie: facilitatorCookie },
+    });
+    assert.equal(facilitatorData.status, 200);
+    assert.equal(facilitatorData.headers.get("cache-control"), "private, no-store");
+    assert.equal(facilitatorData.headers.get("x-robots-tag"), "noindex, nofollow");
+    const facilitatorRows = (await facilitatorData.json()).responses;
+    assert.equal(facilitatorRows[0].participant_id, participantId);
+    assert.equal(facilitatorRows[0].notes, "Anonymous local integration note");
+
+    const csv = await fetch(`${base}/Blead/facilitator/api/export.csv`, {
+      headers: { cookie: facilitatorCookie },
+    });
+    assert.equal(csv.status, 200);
+    const csvText = await csv.text();
+    assert.match(csvText, new RegExp(participantId, "u"));
+    assert.match(csvText, /"'=HYPERLINK\(""bad""\)"/u);
+
     const tampered = await fetch(`${base}/Blead/content.js`, {
       headers: { cookie: `${cookie.split(";", 1)[0]}x` },
       redirect: "manual",
