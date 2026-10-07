@@ -7,3 +7,4 @@ Squarespace-Wordpress-Export-08-11-2026.xml
 Headshots/
 .env.local
 node_modules/
+.vercel/
