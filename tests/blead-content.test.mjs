@@ -43,6 +43,31 @@ test("Bracco engagement content is role-based and limited to approved program fa
     publicUrl: "https://diagnostic.kaindly.ai",
     sample: false,
   });
+  assert.deepEqual(bleadContent.resources[1], {
+    id: "resource-session-01",
+    type: "Interactive prompt pack",
+    title: "Build Your AI Brain",
+    description: "Complete the Session 1 exercises and copy personalized prompts into Microsoft Copilot",
+    weekId: "week-02",
+    availability: "available",
+    accessMode: "page",
+    publicUrl: "/Blead/session-1-prompts/",
+    actionLabel: "Open prompts",
+    statusLabel: "Available now",
+    sample: false,
+  });
+  assert.deepEqual(bleadContent.resources[2], {
+    id: "resource-session-01-deck",
+    type: "Session deck",
+    title: "Bracco Leadership Accelerator · Session 1",
+    description: "Download the complete Session 1 presentation deck for reference during and after the session",
+    weekId: "week-02",
+    availability: "available",
+    accessMode: "download",
+    publicUrl: "/Blead/materials/bracco-leadership-accelerator-session-1.pdf",
+    statusLabel: "Available now",
+    sample: false,
+  });
   assert.equal(bleadContent.resources.some(({ type, title }) => /recording/i.test(`${type} ${title}`)), false);
 
   const serialized = JSON.stringify(bleadContent);
@@ -81,6 +106,10 @@ test("Blead generator rejects hostile or malformed destinations", async () => {
   const unknownFragment = structuredClone(bleadContent);
   unknownFragment.updates[0].destination = "#not-a-section";
   assert.throws(() => renderBleadPage(unknownFragment), /approved fragment/);
+
+  const escapedWorkbook = structuredClone(bleadContent);
+  escapedWorkbook.resources[1].publicUrl = "/Blead/../contact/";
+  assert.throws(() => renderBleadPage(escapedWorkbook), /approved protected page/);
 });
 
 test("approved same-site materials render as real downloads only when available", async () => {
@@ -97,7 +126,10 @@ test("approved same-site materials render as real downloads only when available"
   );
 
   const html = renderBleadPage(downloadable, {
-    downloadExists: (publicPath) => publicPath === "/Blead/materials/program-overview.pdf",
+    downloadExists: (publicPath) => [
+      "/Blead/materials/program-overview.pdf",
+      "/Blead/materials/bracco-leadership-accelerator-session-1.pdf",
+    ].includes(publicPath),
   });
   assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/materials\/program-overview\.pdf"[^>]+download[^>]*>Download material<\/a>/);
 
@@ -121,6 +153,11 @@ test("generated hub is semantic, accessible, and review-safe", async () => {
   assert.match(html, /href="https:\/\/diagnostic\.kaindly\.ai"[^>]+target="_blank"[^>]+rel="noopener noreferrer"/);
   assert.match(html, /<h4>Materials<\/h4>[\s\S]*?<a[^>]+href="https:\/\/diagnostic\.kaindly\.ai"[^>]+>AI Readiness Assessment/);
   assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="https:\/\/diagnostic\.kaindly\.ai"[^>]+>Open assessment/);
+  assert.match(html, /<a[^>]+href="\/Blead\/session-1-prompts\/"[^>]*>Build Your AI Brain/);
+  assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/session-1-prompts\/"[^>]*>Open prompts<\/a>/);
+  assert.match(html, /<a[^>]+href="\/Blead\/materials\/bracco-leadership-accelerator-session-1\.pdf"[^>]+download[^>]*>Bracco Leadership Accelerator · Session 1<\/a>/);
+  assert.match(html, /<a[^>]+class="blead-resource-download"[^>]+href="\/Blead\/materials\/bracco-leadership-accelerator-session-1\.pdf"[^>]+download[^>]*>Download material<\/a>/);
+  assert.match(html, />Available now</);
   assert.match(html, />Assessment open</);
   assert.match(html, />October 7, 2026</);
   assert.match(html, />Coming soon</);

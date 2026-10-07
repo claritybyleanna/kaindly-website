@@ -1,3 +1,9 @@
+export function sanitizeBleadAccessReturnTo(value = "") {
+  return /^\/Blead\/(?:[a-z0-9-]+\/)*(?:#[a-z0-9-]+)?$/i.test(value)
+    ? value
+    : "/Blead/";
+}
+
 function initializeBleadAccess() {
   const form = document.querySelector("[data-blead-access-form]");
   const password = document.querySelector("#program-password");
@@ -6,7 +12,7 @@ function initializeBleadAccess() {
 
   const params = new URLSearchParams(window.location.search);
   const requestedReturn = params.get("returnTo") || "/Blead/";
-  const returnTo = /^\/Blead\/(?:#[a-z0-9-]+)?$/i.test(requestedReturn) ? requestedReturn : "/Blead/";
+  const returnTo = sanitizeBleadAccessReturnTo(requestedReturn);
   form.elements.returnTo.value = returnTo;
   const requestedHash = params.get("returnHash") || window.location.hash;
   form.elements.returnHash.value = /^#week-[0-9]{2}$/.test(requestedHash) ? requestedHash : "";

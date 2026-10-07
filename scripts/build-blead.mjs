@@ -17,6 +17,7 @@ const resourceLabels = {
   unavailable: "Temporarily unavailable",
 };
 const approvedAssessmentUrl = "https://diagnostic.kaindly.ai";
+const approvedProtectedPages = new Set(["/Blead/session-1-prompts/"]);
 const approvedSectionFragments = new Set([
   "#overview",
   "#program-plan",
@@ -28,7 +29,7 @@ const approvedSectionFragments = new Set([
 const approvedPolicyPaths = new Set(["/privacy/", "/terms/"]);
 const approvedWeekStates = new Set(Object.keys(stateLabels));
 const approvedResourceStates = new Set(Object.keys(resourceLabels));
-const approvedAccessModes = new Set(["none", "download", "external"]);
+const approvedAccessModes = new Set(["none", "download", "external", "page"]);
 
 export function escapeHtml(value = "") {
   return String(value).replace(/[&<>'"]/g, (character) => ({
@@ -64,6 +65,12 @@ function assertApprovedDownloadPath(value, field) {
   }
 }
 
+function assertApprovedProtectedPage(value, field) {
+  if (!approvedProtectedPages.has(value)) {
+    throw new Error(`${field} must use an approved protected page`);
+  }
+}
+
 function defaultDownloadExists(publicPath) {
   return existsSync(new URL(`..${publicPath}`, import.meta.url));
 }
@@ -91,11 +98,15 @@ export function validatePublicContent(content, { downloadExists = defaultDownloa
       throw new Error("Resource IDs and states must use approved values");
     }
     if (resource.availability === "available") {
-      if (resource.accessMode !== "download") throw new Error("An available material must use download access");
-      if (!resource.publicUrl) throw new Error("An available material requires an approved download");
-      assertApprovedDownloadPath(resource.publicUrl, "Material destination");
-      if (!downloadExists(resource.publicUrl)) {
-        throw new Error(`Material download file does not exist: ${resource.publicUrl}`);
+      if (resource.accessMode === "page") {
+        assertApprovedProtectedPage(resource.publicUrl, "Interactive material destination");
+      } else {
+        if (resource.accessMode !== "download") throw new Error("An available material must use download or page access");
+        if (!resource.publicUrl) throw new Error("An available material requires an approved download");
+        assertApprovedDownloadPath(resource.publicUrl, "Material destination");
+        if (!downloadExists(resource.publicUrl)) {
+          throw new Error(`Material download file does not exist: ${resource.publicUrl}`);
+        }
       }
     } else if (resource.availability === "external") {
       if (resource.accessMode !== "external") throw new Error("An external material must use external access");
@@ -156,10 +167,12 @@ function statusTone(state) {
 function renderInlineResource(resource) {
   const tone = statusTone(resource.availability);
   const toneClass = tone ? ` blead-inline-resource--${tone}` : "";
-  const title = resource.accessMode === "external"
-    ? renderEngagementLink(resource.publicUrl, resource.title)
-    : `<strong>${escapeHtml(resource.title)}</strong>`;
-  return `<div class="blead-inline-resource${toneClass}" data-resource-state="${escapeHtml(resource.availability)}">${title}<span class="blead-inline-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span></div>`;
+  const title = resource.accessMode === "download"
+    ? `<a href="${escapeHtml(resource.publicUrl)}" download>${escapeHtml(resource.title)}</a>`
+    : ["external", "page"].includes(resource.accessMode)
+      ? renderEngagementLink(resource.publicUrl, resource.title)
+      : `<strong>${escapeHtml(resource.title)}</strong>`;
+  return `<div class="blead-inline-resource${toneClass}" data-resource-state="${escapeHtml(resource.availability)}">${title}<span class="blead-inline-resource-status">${escapeHtml(resource.statusLabel || resourceLabels[resource.availability])}</span></div>`;
 }
 
 function renderWeek(week, resources) {
@@ -214,13 +227,15 @@ function renderResource(resource) {
     ? `    <a class="blead-resource-download" href="${escapeHtml(resource.publicUrl)}" download>Download material</a>\n`
     : resource.accessMode === "external"
       ? `    ${renderEngagementLink(resource.publicUrl, "Open assessment", { className: "blead-resource-download" })}\n`
+      : resource.accessMode === "page"
+        ? `    ${renderEngagementLink(resource.publicUrl, resource.actionLabel || "Open material", { className: "blead-resource-download" })}\n`
       : "";
 
   return `<article class="blead-resource${toneClass}" data-resource data-resource-state="${escapeHtml(resource.availability)}" data-resource-type="${escapeHtml(resource.type.toLowerCase().replaceAll(" ", "-"))}">
     <span class="blead-resource-type">${escapeHtml(resource.type)}</span>
     <h3>${escapeHtml(resource.title)}</h3>
     <p>${escapeHtml(resource.description)}</p>
-    <span class="blead-resource-status">${escapeHtml(resourceLabels[resource.availability])}</span>
+    <span class="blead-resource-status">${escapeHtml(resource.statusLabel || resourceLabels[resource.availability])}</span>
 ${resourceAction}  </article>`;
 }
 

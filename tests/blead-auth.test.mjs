@@ -52,9 +52,31 @@ test("cookie helpers scope and clear the Blead session", () => {
 test("return destinations cannot leave the protected route", () => {
   assert.equal(sanitizeBleadReturnTo("/Blead/"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("/Blead/#week-01"), "/Blead/#week-01");
+  assert.equal(
+    sanitizeBleadReturnTo("/Blead/session-1-prompts/"),
+    "/Blead/session-1-prompts/",
+  );
+  assert.equal(
+    sanitizeBleadReturnTo("/Blead/session-1-prompts/#prompt-02"),
+    "/Blead/session-1-prompts/#prompt-02",
+  );
+  assert.equal(sanitizeBleadReturnTo("/Blead/../contact/"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("https://attacker.example"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("//attacker.example"), "/Blead/");
   assert.equal(sanitizeBleadReturnTo("/contact/"), "/Blead/");
+});
+
+test("the access page preserves safe nested workbook destinations", async () => {
+  const accessModule = await import("../assets/js/blead-access.js");
+  assert.equal(typeof accessModule.sanitizeBleadAccessReturnTo, "function");
+  assert.equal(
+    accessModule.sanitizeBleadAccessReturnTo("/Blead/session-1-prompts/"),
+    "/Blead/session-1-prompts/",
+  );
+  assert.equal(
+    accessModule.sanitizeBleadAccessReturnTo("/Blead/../contact/"),
+    "/Blead/",
+  );
 });
 
 async function withBleadEnvironment(values, run) {
