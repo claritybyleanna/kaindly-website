@@ -1,4 +1,5 @@
 import { next } from "@vercel/functions";
+import { authorizeDashboardRequest } from "./lib/dashboard-auth.js";
 import {
   BLEAD_COOKIE_NAME,
   BLEAD_FACILITATOR_COOKIE_NAME,
@@ -221,6 +222,19 @@ export function isMclendonEntryPath(pathname) {
   return pathname === "/McLendon" || pathname === "/McLendon/";
 }
 
+export function isProtectedDashboardPath(pathname) {
+  return pathname === "/dashboard" || pathname.startsWith("/dashboard/");
+}
+
+export function isDashboardPublicPath(pathname) {
+  return pathname === "/dashboard/access"
+    || pathname === "/dashboard/access/"
+    || pathname === "/dashboard/verify"
+    || pathname === "/dashboard/verify/"
+    || pathname === "/dashboard/api/auth-config"
+    || pathname === "/dashboard/api/auth-config/";
+}
+
 function redirect(location, headers = {}) {
   return new Response(null, {
     status: 303,
@@ -234,6 +248,35 @@ function redirect(location, headers = {}) {
 
 function nextProtected() {
   const response = next();
+  response.headers.set("Cache-Control", "private, no-store");
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
+}
+
+function sanitizeDashboardReturnTo(value) {
+  if (typeof value !== "string" || !value.startsWith("/dashboard")) return "/dashboard/";
+  if (value.startsWith("//") || /[\r\n]/u.test(value)) return "/dashboard/";
+  return value;
+}
+
+export async function handleDashboardRoute(
+  request,
+  { authorize = authorizeDashboardRequest } = {},
+) {
+  const url = new URL(request.url);
+  if (isDashboardPublicPath(url.pathname)) return nextProtected();
+
+  let identity = null;
+  try {
+    identity = await authorize(request);
+  } catch {
+    identity = null;
+  }
+  if (identity) return nextProtected();
+
+  const accessUrl = new URL("/dashboard/access/", url);
+  accessUrl.searchParams.set("returnTo", sanitizeDashboardReturnTo(url.pathname + url.search));
+  const response = redirect(accessUrl);
   response.headers.set("Cache-Control", "private, no-store");
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return response;
@@ -364,6 +407,9 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
+  if (isProtectedDashboardPath(url.pathname)) {
+    return handleDashboardRoute(request);
+  }
   if (request.method === "GET" && isMclendonEntryPath(url.pathname)) {
     const secret = process.env.MCLENDON_SESSION_SECRET;
     if (!isValidMclendonSessionSecret(secret, {

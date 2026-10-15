@@ -16,7 +16,12 @@
     "prototype:blead": "npm run build:blead && node scripts/blead-prototype-server.mjs"
   },
   "dependencies": {
+    "@clerk/backend": "^3.23.2",
+    "@clerk/clerk-js": "^6.39.0",
     "@neondatabase/serverless": "^1.2.0",
     "@vercel/functions": "3.9.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }
