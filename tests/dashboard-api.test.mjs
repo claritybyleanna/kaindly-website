@@ -44,6 +44,34 @@ function dashboardStore({ filteredRows = [], allRows = filteredRows, summary } =
   };
 }
 
+function filteringDashboardStore(rows) {
+  const calls = [];
+  const matching = (filters) => rows.filter((row) => (
+    (!filters.clientId || row.client_id === filters.clientId)
+    && (!filters.programId || row.program_id === filters.programId)
+    && (!filters.workbookId || row.workbook_id === filters.workbookId)
+    && (!filters.exerciseId || row.exercise_id === filters.exerciseId)
+    && (!filters.participantId || row.participant_id === filters.participantId)
+  ));
+  return {
+    calls,
+    async listDashboard(filters) {
+      calls.push(["listDashboard", filters]);
+      return matching(filters);
+    },
+    async countDashboard(filters) {
+      calls.push(["countDashboard", filters]);
+      const selected = matching(filters);
+      return [{
+        clients: new Set(selected.map(({ client_id: id }) => id)).size,
+        workbooks: new Set(selected.map(({ workbook_id: id }) => id)).size,
+        participants: new Set(selected.map(({ workbook_id: workbookId, participant_id: id }) => `${workbookId}:${id}`)).size,
+        responses: selected.length,
+      }];
+    },
+  };
+}
+
 async function modules() {
   return import("../lib/workbook-response-api.js");
 }
@@ -109,6 +137,10 @@ test("parseDashboardFilters rejects unknown, duplicate, malformed, and unregiste
     ["unknown workbook", "workbook=other", /unknown workbook/iu],
     ["unknown exercise", "exercise=other", /unknown exercise/iu],
     ["invalid participant", "participant=not-a-uuid", /participant/iu],
+    ["participant without workbook", `participant=${PARTICIPANT_ONE}`, /participant.*workbook|workbook.*participant/iu],
+    ["client and program from different registrations", "client=bracco&program=working-smarter-from-day-one", /combination/iu],
+    ["client and exercise from different registrations", "client=mclendon-working-smarter&exercise=prompt-02", /combination/iu],
+    ["program and exercise from different registrations", "program=leadership-accelerator&exercise=deal", /combination/iu],
     ["invalid from date", "from=2026-02-30", /from/iu],
     ["invalid to date", "to=tomorrow", /to/iu],
     ["reversed date range", "from=2026-10-16&to=2026-10-15", /date range/iu],
@@ -177,7 +209,10 @@ test("JSON dashboard returns summary, every registered workbook, filter choices,
   assert.ok(body.filters.programs.some(({ id }) => id === "sales-ai-working-session"));
   assert.ok(body.filters.workbooks.some(({ id }) => id === "bracco-sales-ai-brain"));
   assert.ok(body.filters.exercises.some(({ id, workbookId }) => id === "prompt-02" && workbookId === "bracco-sales-ai-brain"));
-  assert.deepEqual(body.filters.participants, [PARTICIPANT_ONE]);
+  assert.deepEqual(body.filters.participants, [{
+    id: PARTICIPANT_ONE,
+    workbookId: "bracco-sales-ai-brain",
+  }]);
   assert.deepEqual(body.responses[0], {
     client: { id: "bracco", name: "Bracco" },
     program: { id: "sales-ai-working-session", name: "Sales Team AI Working Session" },
@@ -198,6 +233,53 @@ test("JSON dashboard returns summary, every registered workbook, filter choices,
   assert.equal(response.headers.get("cache-control"), "private, no-store");
   assert.equal(response.headers.get("x-content-type-options"), "nosniff");
   assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
+});
+
+test("participant identity remains workbook-qualified in JSON filters and CSV export", async () => {
+  const { createDashboardHandlers } = await modules();
+  const rows = [
+    rawRow({
+      workbookId: "bracco-sales-ai-brain",
+      exerciseId: "prompt-02",
+      participantId: PARTICIPANT_ONE,
+      payload: { fields: { "field-01": "Sales workbook value" }, notes: "Sales workbook note" },
+    }),
+    rawRow({
+      workbookId: "mclendon-working-smarter",
+      exerciseId: "deal",
+      participantId: PARTICIPANT_ONE,
+      payload: { fields: {}, notes: "McLendon workbook note" },
+    }),
+  ];
+  const store = filteringDashboardStore(rows);
+  const handlers = createDashboardHandlers({
+    authorize: async () => ({}),
+    store,
+    registry: listWorkbookRegistrations(),
+    now: () => NOW,
+  });
+
+  const unfiltered = await (await handlers.GET(new Request(
+    "https://www.kaindly.ai/dashboard/api/responses",
+  ))).json();
+  assert.deepEqual(unfiltered.filters.participants, [
+    { id: PARTICIPANT_ONE, workbookId: "bracco-sales-ai-brain" },
+    { id: PARTICIPANT_ONE, workbookId: "mclendon-working-smarter" },
+  ]);
+
+  const query = `workbook=bracco-sales-ai-brain&participant=${PARTICIPANT_ONE}`;
+  const filtered = await (await handlers.GET(new Request(
+    `https://www.kaindly.ai/dashboard/api/responses?${query}`,
+  ))).json();
+  assert.equal(filtered.responses.length, 1);
+  assert.equal(filtered.responses[0].workbook.id, "bracco-sales-ai-brain");
+  assert.equal(filtered.responses[0].notes, "Sales workbook note");
+
+  const csv = await (await handlers.EXPORT(new Request(
+    `https://www.kaindly.ai/dashboard/api/export.csv?${query}`,
+  ))).text();
+  assert.match(csv, /Sales workbook note/u);
+  assert.doesNotMatch(csv, /McLendon workbook note/u);
 });
 
 test("directory marks expired registrations using the injected request clock", async () => {
