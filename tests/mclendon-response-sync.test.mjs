@@ -24,17 +24,28 @@ function noteControl(exerciseId, value = "") {
   return {
     dataset: { workbookNote: exerciseId },
     value,
-    addEventListener(type, listener) { listeners.set(type, listener); },
-    emit(type) { listeners.get(type)?.({ target: this }); },
+    addEventListener(type, listener) {
+      const entries = listeners.get(type) ?? [];
+      entries.push(listener);
+      listeners.set(type, entries);
+    },
+    emit(type) {
+      for (const listener of listeners.get(type) ?? []) listener({ target: this });
+    },
   };
 }
 
 function workbookCard(exerciseId, value = "") {
   const note = noteControl(exerciseId, value);
+  const status = { textContent: "Saved." };
   return {
     note,
+    status,
     querySelector(selector) {
-      return selector === "[data-workbook-note]" ? note : null;
+      return {
+        "[data-workbook-note]": note,
+        "[data-note-status]": status,
+      }[selector] ?? null;
     },
     querySelectorAll() { return []; },
   };
@@ -46,7 +57,7 @@ function documentRoot(cards) {
     visibilityState: "visible",
     querySelectorAll(selector) {
       if (selector === "[data-workbook-prompt]") return cards;
-      if (selector === "[data-note-status]") return [];
+      if (selector === "[data-note-status]") return cards.map(({ status }) => status);
       return [];
     },
     addEventListener(type, listener) { listeners.set(type, listener); },
@@ -170,4 +181,85 @@ test("McLendon migrates legacy notes only when workbook-scoped notes are empty",
   assert.equal(storage.values.get(newNotesKey("crisis")), "New crisis note");
   assert.equal(storage.values.get(newNotesKey("business-decision")), "Legacy decision note");
   assert.equal(storage.values.get(newNotesKey("deal")), "Server deal note");
+});
+
+test("McLendon reports unavailable browser persistence without adding a second note writer", async () => {
+  const card = workbookCard("crisis");
+  const setCalls = [];
+  const storage = {
+    getItem() { throw new Error("storage unavailable"); },
+    setItem(key, value) {
+      setCalls.push([key, String(value)]);
+      throw new Error("storage unavailable");
+    },
+  };
+  const fetchImpl = async (_url, options = {}) => options.method
+    ? { ok: true, json: async () => ({}) }
+    : { ok: true, json: async () => ({ responses: [] }) };
+
+  const sync = mclendon.initializeMclendonResponseSync({
+    documentRoot: documentRoot([card]),
+    storage,
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl,
+    delay: 0,
+    navigatorRoot: {},
+    windowRoot: { addEventListener() {} },
+  });
+  await sync.ready;
+  card.note.value = "Check the source.";
+  card.note.emit("input");
+
+  assert.equal(card.status.textContent, "Private saving is unavailable in this browser.");
+  assert.deepEqual(
+    setCalls.filter(([key]) => key === newNotesKey("crisis")),
+    [[newNotesKey("crisis"), "Check the source."]],
+    "only shared sync may attempt the note write",
+  );
+  await sync.whenIdle();
+  assert.equal(card.status.textContent, "Saved.", "a successful remote save restores the saved status");
+});
+
+test("McLendon reports failed restore and POST sync, then returns to Saved after recovery", async () => {
+  const restoreCard = workbookCard("build-app");
+  const restoreSync = mclendon.initializeMclendonResponseSync({
+    documentRoot: documentRoot([restoreCard]),
+    storage: memoryStorage(),
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl: async () => ({ ok: false, json: async () => ({}) }),
+    delay: 0,
+    navigatorRoot: {},
+    windowRoot: { addEventListener() {} },
+  });
+  await restoreSync.ready;
+  assert.equal(restoreCard.status.textContent, "Private saving is unavailable in this browser.");
+
+  const postCard = workbookCard("deal");
+  let rejectPost = true;
+  const fetchImpl = async (_url, options = {}) => {
+    if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+    return { ok: !rejectPost, json: async () => ({}) };
+  };
+  const postSync = mclendon.initializeMclendonResponseSync({
+    documentRoot: documentRoot([postCard]),
+    storage: memoryStorage(),
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl,
+    delay: 0,
+    navigatorRoot: {},
+    windowRoot: { addEventListener() {} },
+  });
+  await postSync.ready;
+  postCard.note.value = "First attempt";
+  postCard.note.emit("input");
+  postCard.note.emit("blur");
+  await postSync.whenIdle();
+  assert.equal(postCard.status.textContent, "Private saving is unavailable in this browser.");
+
+  rejectPost = false;
+  postCard.note.value = "Recovered attempt";
+  postCard.note.emit("input");
+  postCard.note.emit("blur");
+  await postSync.whenIdle();
+  assert.equal(postCard.status.textContent, "Saved.");
 });

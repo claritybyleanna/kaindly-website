@@ -3,6 +3,8 @@ import { initializeWorkbookSync } from "./workbook-sync.js";
 const MCLENDON_WORKBOOK_ID = "mclendon-working-smarter";
 const MCLENDON_ENDPOINT = "/McLendon/api/responses";
 const LEGACY_STORAGE_PREFIX = "kaindly-mclendon-workbook:";
+const SAVED_STATUS = "Saved.";
+const UNAVAILABLE_STATUS = "Private saving is unavailable in this browser.";
 
 function workbookNotesKey(exerciseId) {
   return `kaindly:workbook:${MCLENDON_WORKBOOK_ID}:exercise:${exerciseId}:notes`;
@@ -21,6 +23,14 @@ function writeStorage(storage, key, value) {
     storage?.setItem(key, value);
   } catch {
     // The shared sync engine remains usable when browser storage is unavailable.
+  }
+}
+
+function storageMatches(storage, key, value) {
+  try {
+    return storage?.getItem(key) === String(value ?? "");
+  } catch {
+    return false;
   }
 }
 
@@ -77,7 +87,13 @@ export function initializeMclendonResponseSync({
   const cards = [...documentRoot.querySelectorAll("[data-workbook-prompt]")];
   migrateLegacyWorkbookNotes(storage, cards);
 
-  return initializeWorkbookSync({
+  const statuses = cards
+    .map((card) => card.querySelector("[data-note-status]"))
+    .filter(Boolean);
+  const setAllStatuses = (copy) => {
+    for (const status of statuses) status.textContent = copy;
+  };
+  const sync = initializeWorkbookSync({
     workbookId: MCLENDON_WORKBOOK_ID,
     endpoint: MCLENDON_ENDPOINT,
     cards,
@@ -95,7 +111,26 @@ export function initializeMclendonResponseSync({
     getFields: () => [],
     getNotes: noteFrom,
     getExerciseId: exerciseIdFrom,
+    onStatus(state) {
+      if (state === "saved") setAllStatuses(SAVED_STATUS);
+      if (state === "offline") setAllStatuses(UNAVAILABLE_STATUS);
+    },
   });
+
+  for (const card of cards) {
+    const note = noteFrom(card);
+    const status = card.querySelector("[data-note-status]");
+    if (!note || !status) continue;
+    note.addEventListener("input", () => {
+      status.textContent = storageMatches(
+        storage,
+        workbookNotesKey(exerciseIdFrom(card)),
+        note.value,
+      ) ? SAVED_STATUS : UNAVAILABLE_STATUS;
+    });
+  }
+
+  return sync;
 }
 
 export async function copyWorkbookPrompt(clipboard, promptText) {
