@@ -50,7 +50,7 @@ function promptCard({ title = "", team = "", notes = "" } = {}) {
   };
 }
 
-test("reuses one random anonymous ID in the same browser", () => {
+test("reuses one random anonymous ID through the Blead compatibility wrapper", () => {
   const values = new Map();
   const storage = mapStorage(values);
   const cryptoApi = { randomUUID: () => participantId };
@@ -59,7 +59,10 @@ test("reuses one random anonymous ID in the same browser", () => {
     getOrCreateParticipantId(storage, cryptoApi),
     getOrCreateParticipantId(storage, cryptoApi),
   );
-  assert.equal([...values.values()][0], participantId);
+  assert.equal(
+    values.get("kaindly:workbook:bracco-leadership-session-1:participant-id"),
+    participantId,
+  );
 });
 
 test("queues the newest snapshot while one save is in flight", async () => {
@@ -123,7 +126,7 @@ test("collects one authored exercise snapshot", () => {
   });
 });
 
-test("server hydration never overwrites populated local fields", () => {
+test("server hydration preserves populated local fields and fills empty controls", () => {
   const populated = promptCard({ title: "Local title" });
   const empty = promptCard();
   const row = {
@@ -133,8 +136,10 @@ test("server hydration never overwrites populated local fields", () => {
     },
   };
 
-  assert.equal(hydrateExerciseFromServer(populated, row), false);
+  assert.equal(hydrateExerciseFromServer(populated, row), true);
   assert.equal(populated.fields[0].value, "Local title");
+  assert.equal(populated.fields[1].value, "Server team");
+  assert.equal(populated.noteControl.value, "Server notes");
   assert.equal(hydrateExerciseFromServer(empty, row), true);
   assert.equal(empty.fields[0].value, "Server title");
   assert.equal(empty.noteControl.value, "Server notes");
