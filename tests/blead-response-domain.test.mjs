@@ -79,3 +79,11 @@ test("exports notes even when an exercise has no authored fields", () => {
 
   assert.match(csv, /Keep this note/);
 });
+
+test("compatibility wrappers retain snapshot shape and legacy CSV columns", () => {
+  assert.deepEqual(normalizeExerciseSnapshot({ participantId, exerciseId: "prompt-01", fields: { title: 42 } }, promptPackContent), {
+    participantId, workbookId: "bracco-session-1", exerciseId: "prompt-01",
+    payload: { fields: { title: "42" }, notes: "" },
+  });
+  assert.equal(responsesToCsv([], promptPackContent), '"Participant ID","Exercise","Field","Response","Notes","Updated At","Delete After"\r\n');
+});
