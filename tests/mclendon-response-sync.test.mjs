@@ -263,3 +263,45 @@ test("McLendon reports failed restore and POST sync, then returns to Saved after
   await postSync.whenIdle();
   assert.equal(postCard.status.textContent, "Saved.");
 });
+
+test("McLendon keeps each exercise failure status until that exercise recovers", async () => {
+  const first = workbookCard("build-app");
+  const second = workbookCard("crisis");
+  let failFirst = true;
+  const fetchImpl = async (_url, options = {}) => {
+    if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+    const snapshot = JSON.parse(options.body);
+    return { ok: !(snapshot.exerciseId === "build-app" && failFirst), json: async () => ({}) };
+  };
+  const sync = mclendon.initializeMclendonResponseSync({
+    documentRoot: documentRoot([first, second]),
+    storage: memoryStorage(),
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl,
+    delay: 0,
+    navigatorRoot: {},
+    windowRoot: { addEventListener() {} },
+  });
+  await sync.ready;
+
+  first.note.value = "First exercise fails";
+  first.note.emit("input");
+  first.note.emit("blur");
+  await sync.whenIdle();
+  assert.equal(first.status.textContent, "Private saving is unavailable in this browser.");
+
+  second.note.value = "Second exercise succeeds";
+  second.note.emit("input");
+  second.note.emit("blur");
+  await sync.whenIdle();
+  assert.equal(first.status.textContent, "Private saving is unavailable in this browser.");
+  assert.equal(second.status.textContent, "Saved.");
+
+  failFirst = false;
+  first.note.value = "First exercise recovers";
+  first.note.emit("input");
+  first.note.emit("blur");
+  await sync.whenIdle();
+  assert.equal(first.status.textContent, "Saved.");
+  assert.equal(second.status.textContent, "Saved.");
+});

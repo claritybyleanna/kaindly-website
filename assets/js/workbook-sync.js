@@ -261,7 +261,13 @@ export function initializeWorkbookSync({
   for (const card of workbookCards) {
     hydrateLocal(card);
     const exerciseId = getExerciseId(card);
-    const controller = createAutosaveController({ save: serializedSave, delay, timers, onStatus });
+    const statusContext = { card, exerciseId };
+    const controller = createAutosaveController({
+      save: serializedSave,
+      delay,
+      timers,
+      onStatus: (state) => onStatus(state, statusContext),
+    });
     controllers.set(exerciseId, controller);
     const notes = getNotes(card);
     const controls = [...getFields(card), notes].filter(Boolean);

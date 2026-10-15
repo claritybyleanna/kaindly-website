@@ -111,9 +111,15 @@ export function initializeMclendonResponseSync({
     getFields: () => [],
     getNotes: noteFrom,
     getExerciseId: exerciseIdFrom,
-    onStatus(state) {
-      if (state === "saved") setAllStatuses(SAVED_STATUS);
-      if (state === "offline") setAllStatuses(UNAVAILABLE_STATUS);
+    onStatus(state, context) {
+      if (!context) {
+        if (state === "offline") setAllStatuses(UNAVAILABLE_STATUS);
+        return;
+      }
+      const status = context.card.querySelector("[data-note-status]");
+      if (!status) return;
+      if (state === "saved") status.textContent = SAVED_STATUS;
+      if (state === "offline") status.textContent = UNAVAILABLE_STATUS;
     },
   });
 

@@ -167,6 +167,55 @@ test("a failed snapshot is retained and the newest value retries on a later flus
   assert.deepEqual(sent, ["kept locally", "newest local value"]);
 });
 
+test("workbook status callbacks receive card context while restore failures remain workbook-wide", async () => {
+  const card = workbookCard({ exerciseId: "prompt-context" });
+  const events = [];
+  const sync = initializeWorkbookSync({
+    workbookId: "context-workbook",
+    endpoint: "/context/api/responses",
+    cards: [card],
+    collectSnapshot,
+    hydrateSnapshot,
+    storage: memoryStorage(),
+    cryptoApi: fakeCrypto([uuidA]),
+    fetchImpl: async (_url, options = {}) => options.method
+      ? { ok: true, json: async () => ({}) }
+      : { ok: true, json: async () => ({ responses: [] }) },
+    documentRoot: eventTarget({ visibilityState: "visible" }),
+    windowRoot: eventTarget(),
+    delay: 0,
+    onStatus(state, context) { events.push([state, context]); },
+  });
+  await sync.ready;
+  card.fields[0].value = "Context-aware save";
+  card.fields[0].emit("input");
+  card.fields[0].emit("blur");
+  await sync.whenIdle();
+
+  assert.deepEqual(events.map(([state]) => state), ["saving", "saved"]);
+  for (const [, context] of events) {
+    assert.equal(context.card, card);
+    assert.equal(context.exerciseId, "prompt-context");
+  }
+
+  const restoreEvents = [];
+  const restoreSync = initializeWorkbookSync({
+    workbookId: "context-restore",
+    endpoint: "/context-restore/api/responses",
+    cards: [workbookCard({ exerciseId: "prompt-restore" })],
+    collectSnapshot,
+    hydrateSnapshot,
+    storage: memoryStorage(),
+    cryptoApi: fakeCrypto([uuidB]),
+    fetchImpl: async () => ({ ok: false, json: async () => ({}) }),
+    documentRoot: eventTarget({ visibilityState: "visible" }),
+    windowRoot: eventTarget(),
+    onStatus(...args) { restoreEvents.push(args); },
+  });
+  await restoreSync.ready;
+  assert.deepEqual(restoreEvents, [["offline"]]);
+});
+
 test("initialization hydrates local first, fills only empty values from server, and reconciles local data", async () => {
   const workbookId = "sales-pack-1";
   const storage = memoryStorage([
