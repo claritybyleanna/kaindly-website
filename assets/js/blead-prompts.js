@@ -1,9 +1,24 @@
 import { initializePromptSync } from "./blead-prompt-sync.js";
 
-const STORAGE_PREFIX = "kaindly:blead:session-1";
+const WORKBOOK_ID = "bracco-session-1";
+const LEGACY_STORAGE_PREFIX = "kaindly:blead:session-1";
+
+function legacyStorageKey(promptId, fieldId) {
+  return `${LEGACY_STORAGE_PREFIX}:${promptId}:${fieldId}`;
+}
 
 function storageKey(promptId, fieldId) {
-  return `${STORAGE_PREFIX}:${promptId}:${fieldId}`;
+  return fieldId === "notes"
+    ? `kaindly:workbook:${WORKBOOK_ID}:exercise:${promptId}:notes`
+    : `kaindly:workbook:${WORKBOOK_ID}:exercise:${promptId}:field:${fieldId}`;
+}
+
+function readStorage(storage, key) {
+  try {
+    return storage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export function compilePrompt(template, replacements = {}) {
@@ -23,11 +38,19 @@ export function saveExerciseValue(storage, promptId, fieldId, value) {
 }
 
 export function loadExerciseValue(storage, promptId, fieldId) {
+  const currentKey = storageKey(promptId, fieldId);
+  const current = readStorage(storage, currentKey);
+  if (String(current ?? "").length > 0) return current;
+
+  const legacy = readStorage(storage, legacyStorageKey(promptId, fieldId));
+  if (legacy === null) return current ?? "";
+
   try {
-    return storage?.getItem(storageKey(promptId, fieldId)) ?? "";
+    storage?.setItem(currentKey, legacy);
   } catch {
-    return "";
+    // The legacy value is still usable for this visit when storage is unavailable.
   }
+  return legacy;
 }
 
 export async function copyPrompt(clipboard, promptText) {
@@ -111,12 +134,16 @@ function initializePrompt(card, documentRoot, storage) {
   refreshPreview();
 }
 
-export function initializePromptWorkbook(documentRoot = globalThis.document, storage = globalThis.localStorage) {
+export function initializePromptWorkbook(
+  documentRoot = globalThis.document,
+  storage = globalThis.localStorage,
+  syncOptions = {},
+) {
   if (!documentRoot) return;
   documentRoot.querySelectorAll("[data-prompt-card]").forEach((card) => {
     initializePrompt(card, documentRoot, storage);
   });
-  return initializePromptSync({ documentRoot, storage });
+  return initializePromptSync({ ...syncOptions, documentRoot, storage });
 }
 
 if (typeof document !== "undefined") initializePromptWorkbook(document);

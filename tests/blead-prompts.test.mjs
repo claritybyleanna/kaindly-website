@@ -54,7 +54,23 @@ test("Session 1 prompt pack is a protected interactive workbook", async () => {
   assert.equal(html, renderBleadPromptPack(promptPackContent));
 });
 
-test("prompt exercises compile personalized copy and keep a local-first copy", async () => {
+test("generated prompt and field identities match the registered Blead workbook schema", async () => {
+  const html = await readFile(pageUrl, "utf8");
+  const { getWorkbookRegistration } = await import("../lib/workbook-registry.js");
+  const registration = getWorkbookRegistration("bracco-leadership-session-1");
+
+  assert.equal(registration.workbook.id, "bracco-session-1");
+  assert.deepEqual(
+    [...html.matchAll(/data-prompt-card data-prompt-id="([^"]+)"/g)].map(([, id]) => id),
+    registration.exercises.map(({ id }) => id),
+  );
+  assert.deepEqual(
+    [...html.matchAll(/data-prompt-field="([^"]+)"/g)].map(([, id]) => id),
+    registration.exercises.flatMap(({ fields }) => fields.map(({ id }) => id)),
+  );
+});
+
+test("prompt exercises compile personalized copy and keep a workbook-scoped local-first copy", async () => {
   assert.equal(
     existsSync(new URL("../assets/js/blead-prompts.js", import.meta.url)),
     true,
@@ -91,6 +107,10 @@ test("prompt exercises compile personalized copy and keep a local-first copy", a
     loadExerciseValue(storage, "prompt-01", "title"),
     "VP, Commercial Analytics",
   );
+  assert.equal(
+    saved.get("kaindly:workbook:bracco-session-1:exercise:prompt-01:field:title"),
+    "VP, Commercial Analytics",
+  );
 
   const copied = [];
   await copyPrompt({ writeText(value) { copied.push(value); return Promise.resolve(); } }, "Personalized prompt");
@@ -99,4 +119,72 @@ test("prompt exercises compile personalized copy and keep a local-first copy", a
   const source = await readFile(new URL("../assets/js/blead-prompts.js", import.meta.url), "utf8");
   assert.match(source, /initializePromptSync/);
   assert.match(source, /blead:hydrate/);
+});
+
+test("legacy exercise values migrate only when their workbook-scoped destination is empty", async () => {
+  const { loadExerciseValue } = await import("../assets/js/blead-prompts.js");
+  const values = new Map([
+    ["kaindly:blead:session-1:prompt-01:title", "Legacy title"],
+    ["kaindly:workbook:bracco-session-1:exercise:prompt-01:field:title", ""],
+    ["kaindly:blead:session-1:prompt-01:team", "Legacy team"],
+    ["kaindly:workbook:bracco-session-1:exercise:prompt-01:field:team", "Current team"],
+    ["kaindly:blead:session-1:prompt-01:notes", "Legacy notes"],
+  ]);
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, value); },
+  };
+
+  assert.equal(loadExerciseValue(storage, "prompt-01", "title"), "Legacy title");
+  assert.equal(
+    values.get("kaindly:workbook:bracco-session-1:exercise:prompt-01:field:title"),
+    "Legacy title",
+  );
+  assert.equal(loadExerciseValue(storage, "prompt-01", "team"), "Current team");
+  assert.equal(
+    values.get("kaindly:workbook:bracco-session-1:exercise:prompt-01:field:team"),
+    "Current team",
+  );
+  assert.equal(loadExerciseValue(storage, "prompt-01", "notes"), "Legacy notes");
+  assert.equal(
+    values.get("kaindly:workbook:bracco-session-1:exercise:prompt-01:notes"),
+    "Legacy notes",
+  );
+});
+
+test("workbook startup uses the persisted Blead ID and protected response endpoint", async () => {
+  const { initializePromptWorkbook } = await import("../assets/js/blead-prompts.js");
+  const participantId = "75f6c553-4bb4-4b3e-9a2a-ef29f1b64930";
+  const values = new Map();
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { values.set(key, value); },
+  };
+  const requests = [];
+  const documentRoot = {
+    visibilityState: "visible",
+    querySelectorAll() { return []; },
+    querySelector() { return null; },
+    addEventListener() {},
+  };
+
+  const sync = initializePromptWorkbook(documentRoot, storage, {
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl: async (url, options = {}) => {
+      requests.push([url, options]);
+      return { ok: true, json: async () => ({ responses: [] }) };
+    },
+    windowRoot: { addEventListener() {} },
+    navigatorRoot: {},
+  });
+  await sync.ready;
+
+  assert.equal(
+    values.get("kaindly:workbook:bracco-session-1:participant-id"),
+    participantId,
+  );
+  assert.deepEqual(
+    requests.map(([url]) => url),
+    [`/Blead/api/responses?participantId=${participantId}`],
+  );
 });
