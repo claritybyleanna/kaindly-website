@@ -16,10 +16,19 @@ import {
   verifyBleadFacilitatorSession,
   verifyBleadSession,
 } from "./lib/blead-auth.js";
+import {
+  BSALES_COOKIE_NAME,
+  clearBsalesSession,
+  sanitizeBsalesReturnTo,
+  serializeBsalesSession,
+  signBsalesSession,
+  verifyBsalesSession,
+} from "./lib/bsales-auth.js";
 
 const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
 const BLEAD_SESSION_MS = 8 * 60 * 60 * 1000;
 const BLEAD_FACILITATOR_SESSION_MS = 4 * 60 * 60 * 1000;
+const BSALES_SESSION_MS = 8 * 60 * 60 * 1000;
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
@@ -196,6 +205,10 @@ export function isFacilitatorPath(pathname) {
   return pathname === "/Blead/facilitator" || pathname.startsWith("/Blead/facilitator/");
 }
 
+export function isProtectedBsalesPath(pathname) {
+  return pathname === "/bsales" || pathname.startsWith("/bsales/");
+}
+
 function redirect(location, headers = {}) {
   return new Response(null, {
     status: 303,
@@ -292,6 +305,36 @@ export async function handleBleadFacilitatorAccess(
   });
 }
 
+export async function handleBsalesAccess(
+  request,
+  { password, secret, now = Date.now(), failureDelayMs = 350 } = {},
+) {
+  const url = new URL(request.url);
+  if (!isSameOriginPost(request, url)) {
+    return new Response("Request not accepted.", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  const formData = await request.formData();
+  const candidate = String(formData.get("password") ?? "");
+  const returnTo = sanitizeBsalesReturnTo(String(formData.get("returnTo") ?? ""));
+  if (!(await securePasswordMatch(candidate, password))) {
+    await new Promise((resolve) => setTimeout(resolve, failureDelayMs));
+    const accessUrl = new URL("/bsales/access/", url);
+    accessUrl.searchParams.set("error", "1");
+    accessUrl.searchParams.set("returnTo", returnTo);
+    accessUrl.hash = "access-error-noscript";
+    return redirect(accessUrl);
+  }
+
+  const token = await signBsalesSession({ expiresAt: now + BSALES_SESSION_MS, secret });
+  return redirect(returnTo, {
+    "Set-Cookie": serializeBsalesSession(token, { secure: url.protocol === "https:" }),
+  });
+}
+
 function unavailable(message) {
   return new Response(message, {
     status: 503,
@@ -309,6 +352,33 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
+  if (isProtectedBsalesPath(url.pathname)) {
+    const password = process.env.BSALES_PASSWORD;
+    const secret = process.env.BSALES_SESSION_SECRET;
+    if (!isValidBleadConfiguration(password, secret)) {
+      return unavailable("This session hub is temporarily unavailable.");
+    }
+
+    if (url.pathname === "/bsales/access/" || url.pathname === "/bsales/access") {
+      if (request.method === "POST") return handleBsalesAccess(request, { password, secret });
+      const token = readCookie(request.headers.get("cookie"), BSALES_COOKIE_NAME);
+      return (await verifyBsalesSession(token, secret)) ? redirect("/bsales/") : nextProtected();
+    }
+
+    if (url.pathname === "/bsales/logout/" && isSameOriginPost(request, url)) {
+      return redirect("/bsales/access/", {
+        "Set-Cookie": clearBsalesSession({ secure: url.protocol === "https:" }),
+      });
+    }
+
+    const token = readCookie(request.headers.get("cookie"), BSALES_COOKIE_NAME);
+    if (await verifyBsalesSession(token, secret)) return nextProtected();
+
+    const accessUrl = new URL("/bsales/access/", url);
+    accessUrl.searchParams.set("returnTo", url.pathname + url.search);
+    return redirect(accessUrl);
+  }
+
   if (!isProtectedBleadPath(url.pathname)) return next();
 
   if (isFacilitatorPath(url.pathname)) {
