@@ -11,7 +11,19 @@
     },
     {
       "source": "/Blead/api/responses",
-      "destination": "/api/blead-responses"
+      "destination": "/api/workbook-responses-blead"
+    },
+    {
+      "source": "/bsales/prompt-pack-1/api/responses",
+      "destination": "/api/workbook-responses-bsales-pack-1"
+    },
+    {
+      "source": "/bsales/prompt-pack-2/api/responses",
+      "destination": "/api/workbook-responses-bsales-pack-2"
+    },
+    {
+      "source": "/McLendon/api/responses",
+      "destination": "/api/workbook-responses-mclendon"
     }
   ],
   "crons": [

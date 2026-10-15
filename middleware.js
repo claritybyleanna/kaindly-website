@@ -24,11 +24,19 @@ import {
   signBsalesSession,
   verifyBsalesSession,
 } from "./lib/bsales-auth.js";
+import {
+  MCLENDON_COOKIE_NAME,
+  isValidMclendonSessionSecret,
+  serializeMclendonSession,
+  signMclendonSession,
+  verifyMclendonSession,
+} from "./lib/mclendon-auth.js";
 
 const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
 const BLEAD_SESSION_MS = 8 * 60 * 60 * 1000;
 const BLEAD_FACILITATOR_SESSION_MS = 4 * 60 * 60 * 1000;
 const BSALES_SESSION_MS = 8 * 60 * 60 * 1000;
+const MCLENDON_SESSION_MS = 8 * 60 * 60 * 1000;
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
@@ -209,6 +217,10 @@ export function isProtectedBsalesPath(pathname) {
   return pathname === "/bsales" || pathname.startsWith("/bsales/");
 }
 
+export function isMclendonEntryPath(pathname) {
+  return pathname === "/McLendon" || pathname === "/McLendon/";
+}
+
 function redirect(location, headers = {}) {
   return new Response(null, {
     status: 303,
@@ -352,6 +364,30 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
+  if (request.method === "GET" && isMclendonEntryPath(url.pathname)) {
+    const secret = process.env.MCLENDON_SESSION_SECRET;
+    if (!isValidMclendonSessionSecret(secret, {
+      reservedSecrets: [
+        process.env.BLEAD_SESSION_SECRET,
+        process.env.BLEAD_FACILITATOR_SESSION_SECRET,
+        process.env.BSALES_SESSION_SECRET,
+      ],
+    })) {
+      return unavailable("This workbook is temporarily unavailable.");
+    }
+
+    const token = readCookie(request.headers.get("cookie"), MCLENDON_COOKIE_NAME);
+    if (await verifyMclendonSession(token, secret)) return nextProtected();
+
+    const nextResponse = nextProtected();
+    const signed = await signMclendonSession({
+      expiresAt: Date.now() + MCLENDON_SESSION_MS,
+      secret,
+    });
+    nextResponse.headers.set("Set-Cookie", serializeMclendonSession(signed));
+    return nextResponse;
+  }
+
   if (isProtectedBsalesPath(url.pathname)) {
     const password = process.env.BSALES_PASSWORD;
     const secret = process.env.BSALES_SESSION_SECRET;
