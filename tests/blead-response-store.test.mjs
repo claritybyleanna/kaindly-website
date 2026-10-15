@@ -42,11 +42,15 @@ test("upserts one snapshot per participant and exercise", async () => {
   );
   assert.match(calls[0].text, /payload = EXCLUDED\.payload/iu);
   assert.match(calls[0].text, /updated_at = now\(\)/iu);
-  assert.equal(calls[0].values[0], snapshot.participantId);
-  assert.equal(calls[0].values[1], snapshot.workbookId);
-  assert.equal(calls[0].values[2], snapshot.exerciseId);
-  assert.equal(calls[0].values[3], JSON.stringify(snapshot.payload));
-  assert.equal(calls[0].values[4], BLEAD_DELETE_AFTER);
+  assert.deepEqual(calls[0].values, [
+    "bracco",
+    "leadership-accelerator",
+    snapshot.participantId,
+    snapshot.workbookId,
+    snapshot.exerciseId,
+    JSON.stringify(snapshot.payload),
+    BLEAD_DELETE_AFTER,
+  ]);
   assert.equal(rows[0].exercise_id, snapshot.exerciseId);
 });
 
@@ -57,9 +61,16 @@ test("lists only the current participant and workbook", async () => {
   await store.listByParticipant(participantId);
 
   assert.match(calls[0].text, /WHERE participant_id = \$1/iu);
-  assert.match(calls[0].text, /AND workbook_id = \$2/iu);
+  assert.match(calls[0].text, /AND client_id = \$2/iu);
+  assert.match(calls[0].text, /AND program_id = \$3/iu);
+  assert.match(calls[0].text, /AND workbook_id = \$4/iu);
   assert.match(calls[0].text, /ORDER BY exercise_id/iu);
-  assert.deepEqual(calls[0].values, [participantId, BLEAD_WORKBOOK_ID]);
+  assert.deepEqual(calls[0].values, [
+    participantId,
+    "bracco",
+    "leadership-accelerator",
+    BLEAD_WORKBOOK_ID,
+  ]);
 });
 
 test("lists all workbook responses in facilitator review order", async () => {
@@ -68,12 +79,18 @@ test("lists all workbook responses in facilitator review order", async () => {
 
   await store.listAll();
 
-  assert.match(calls[0].text, /WHERE workbook_id = \$1/iu);
+  assert.match(calls[0].text, /WHERE client_id = \$1/iu);
+  assert.match(calls[0].text, /program_id = \$2/iu);
+  assert.match(calls[0].text, /workbook_id = \$3/iu);
   assert.match(
     calls[0].text,
     /ORDER BY updated_at DESC, participant_id, exercise_id/iu,
   );
-  assert.deepEqual(calls[0].values, [BLEAD_WORKBOOK_ID]);
+  assert.deepEqual(calls[0].values, [
+    "bracco",
+    "leadership-accelerator",
+    BLEAD_WORKBOOK_ID,
+  ]);
 });
 
 test("deletes only rows whose retention deadline has elapsed", async () => {
@@ -84,7 +101,7 @@ test("deletes only rows whose retention deadline has elapsed", async () => {
   const rows = await store.deleteExpired(now);
 
   assert.match(calls[0].text, /DELETE FROM blead_workbook_responses/iu);
-  assert.match(calls[0].text, /WHERE delete_after <= \$1/iu);
+  assert.match(calls[0].text, /WHERE delete_after <= \$1::timestamptz/iu);
   assert.match(calls[0].text, /RETURNING participant_id/iu);
   assert.deepEqual(calls[0].values, [now.toISOString()]);
   assert.equal(rows.length, 1);
