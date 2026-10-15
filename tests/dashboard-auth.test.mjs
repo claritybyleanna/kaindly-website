@@ -6,6 +6,10 @@ import test from "node:test";
 const NOW = Date.parse("2026-10-15T18:00:00.000Z");
 const ALLOWED_EMAIL = "leanna.baker@kaindly.ai";
 const ORIGINS = ["https://www.kaindly.ai", "https://kaindly-preview.vercel.app"];
+const TEST_PUBLISHABLE_KEY = "pk_test_Y2xlcmsuaW5zcGlyZWQucHVtYS03NC5sY2wuZGV2JA";
+const LIVE_PUBLISHABLE_KEY = "pk_live_Y2xlcmsuZXhhbXBsZS5jb20k";
+const TEST_SECRET_KEY = `sk_test_${"a".repeat(32)}`;
+const LIVE_SECRET_KEY = `sk_live_${"b".repeat(32)}`;
 
 function signedInFixture(overrides = {}) {
   const values = {
@@ -91,6 +95,8 @@ test("rejects absent sessions and every primary-email authorization mismatch", a
     ["another address", { email: "other@kaindly.ai" }],
     ["plus alias", { email: "leanna.baker+dashboard@kaindly.ai" }],
     ["lookalike character", { email: "leanna.bakеr@kaindly.ai" }],
+    ["Kelvin sign in local part", { email: "leanna.baKer@kaindly.ai" }],
+    ["Kelvin sign in domain", { email: "leanna.baker@Kaindly.ai" }],
     ["zero-width variant", { email: "leanna.baker\u200b@kaindly.ai" }],
     ["unverified primary", { verificationStatus: "unverified" }],
     ["case-altered verification state", { verificationStatus: "VERIFIED" }],
@@ -180,7 +186,10 @@ test("fails closed for Clerk errors, inconsistent resources, and malformed confi
 });
 
 test("production authorizer passes only validated environment origins to Clerk", async () => {
-  const { parseAuthorizedOrigins } = await import("../lib/dashboard-auth.js");
+  const {
+    parseAuthorizedOrigins,
+    validateClerkKeyPair,
+  } = await import("../lib/dashboard-auth.js");
   assert.deepEqual(
     parseAuthorizedOrigins(" https://www.kaindly.ai,https://preview.example.vercel.app "),
     ["https://www.kaindly.ai", "https://preview.example.vercel.app"],
@@ -195,34 +204,72 @@ test("production authorizer passes only validated environment origins to Clerk",
   ]) {
     assert.equal(parseAuthorizedOrigins(value), null);
   }
+
+  assert.deepEqual(validateClerkKeyPair(TEST_PUBLISHABLE_KEY, TEST_SECRET_KEY), {
+    publishableKey: TEST_PUBLISHABLE_KEY,
+    secretKey: TEST_SECRET_KEY,
+    instanceType: "development",
+  });
+  assert.deepEqual(validateClerkKeyPair(LIVE_PUBLISHABLE_KEY, LIVE_SECRET_KEY), {
+    publishableKey: LIVE_PUBLISHABLE_KEY,
+    secretKey: LIVE_SECRET_KEY,
+    instanceType: "production",
+  });
+  for (const [publishableKey, secretKey] of [
+    ["pk_test_dashboard123", TEST_SECRET_KEY],
+    [TEST_PUBLISHABLE_KEY, "sk_test_dashboard123"],
+    [TEST_PUBLISHABLE_KEY, LIVE_SECRET_KEY],
+    [LIVE_PUBLISHABLE_KEY, TEST_SECRET_KEY],
+    [TEST_PUBLISHABLE_KEY, `sk_test_${"a".repeat(31)}!`],
+  ]) {
+    assert.equal(validateClerkKeyPair(publishableKey, secretKey), null);
+  }
 });
 
 test("auth configuration endpoint returns only the publishable key with private response headers", async () => {
-  const previous = process.env.CLERK_PUBLISHABLE_KEY;
-  process.env.CLERK_PUBLISHABLE_KEY = "pk_test_dashboard123";
+  const previous = {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
+  };
+  process.env.CLERK_PUBLISHABLE_KEY = TEST_PUBLISHABLE_KEY;
+  process.env.CLERK_SECRET_KEY = TEST_SECRET_KEY;
   try {
     const { GET } = await import(`../api/dashboard-auth-config.js?test=${Date.now()}`);
     const response = await GET(new Request("https://www.kaindly.ai/api/dashboard-auth-config"));
     assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), { publishableKey: "pk_test_dashboard123" });
+    assert.deepEqual(await response.json(), { publishableKey: TEST_PUBLISHABLE_KEY });
     assert.equal(response.headers.get("cache-control"), "private, no-store");
     assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
     assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     assert.equal(response.headers.get("content-type"), "application/json; charset=utf-8");
-    const raw = await readFile(new URL("../api/dashboard-auth-config.js", import.meta.url), "utf8");
-    assert.doesNotMatch(raw, /CLERK_SECRET_KEY|DASHBOARD_ALLOWED_EMAIL/u);
+    assert.doesNotMatch(JSON.stringify(await (await GET()).json()), /secret|sk_(?:test|live)_|leanna\.baker/iu);
   } finally {
-    if (previous === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
-    else process.env.CLERK_PUBLISHABLE_KEY = previous;
+    if (previous.publishableKey === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
+    else process.env.CLERK_PUBLISHABLE_KEY = previous.publishableKey;
+    if (previous.secretKey === undefined) delete process.env.CLERK_SECRET_KEY;
+    else process.env.CLERK_SECRET_KEY = previous.secretKey;
   }
 });
 
-test("auth configuration endpoint fails closed when its public key is absent or malformed", async () => {
-  const previous = process.env.CLERK_PUBLISHABLE_KEY;
+test("auth configuration endpoint fails closed when either Clerk key is malformed or mismatched", async () => {
+  const previous = {
+    publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
+    secretKey: process.env.CLERK_SECRET_KEY,
+  };
   try {
-    for (const value of [undefined, "", "sk_test_secret", "not-a-clerk-key"]) {
-      if (value === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
-      else process.env.CLERK_PUBLISHABLE_KEY = value;
+    for (const [publishableKey, secretKey] of [
+      [undefined, TEST_SECRET_KEY],
+      ["", TEST_SECRET_KEY],
+      ["pk_test_dashboard123", TEST_SECRET_KEY],
+      [TEST_PUBLISHABLE_KEY, undefined],
+      [TEST_PUBLISHABLE_KEY, "sk_test_dashboard123"],
+      [TEST_PUBLISHABLE_KEY, LIVE_SECRET_KEY],
+      [LIVE_PUBLISHABLE_KEY, TEST_SECRET_KEY],
+    ]) {
+      if (publishableKey === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
+      else process.env.CLERK_PUBLISHABLE_KEY = publishableKey;
+      if (secretKey === undefined) delete process.env.CLERK_SECRET_KEY;
+      else process.env.CLERK_SECRET_KEY = secretKey;
       const { GET } = await import(`../api/dashboard-auth-config.js?test=${Math.random()}`);
       const response = await GET(new Request("https://www.kaindly.ai/api/dashboard-auth-config"));
       assert.equal(response.status, 503);
@@ -232,8 +279,10 @@ test("auth configuration endpoint fails closed when its public key is absent or 
       assert.equal(response.headers.get("x-content-type-options"), "nosniff");
     }
   } finally {
-    if (previous === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
-    else process.env.CLERK_PUBLISHABLE_KEY = previous;
+    if (previous.publishableKey === undefined) delete process.env.CLERK_PUBLISHABLE_KEY;
+    else process.env.CLERK_PUBLISHABLE_KEY = previous.publishableKey;
+    if (previous.secretKey === undefined) delete process.env.CLERK_SECRET_KEY;
+    else process.env.CLERK_SECRET_KEY = previous.secretKey;
   }
 });
 

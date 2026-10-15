@@ -1,4 +1,4 @@
-const CLERK_PUBLISHABLE_KEY = /^pk_(?:test|live)_[^\s]+$/u;
+import { validateClerkKeyPair } from "../lib/dashboard-auth.js";
 
 function json(body, status) {
   return new Response(JSON.stringify(body), {
@@ -14,7 +14,8 @@ function json(body, status) {
 
 export function GET() {
   const publishableKey = process.env.CLERK_PUBLISHABLE_KEY;
-  if (!CLERK_PUBLISHABLE_KEY.test(String(publishableKey ?? ""))) {
+  const keys = validateClerkKeyPair(publishableKey, process.env.CLERK_SECRET_KEY);
+  if (!keys) {
     return json({ error: "Authentication is temporarily unavailable." }, 503);
   }
   return json({ publishableKey }, 200);
