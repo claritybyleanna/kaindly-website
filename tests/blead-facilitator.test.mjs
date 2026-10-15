@@ -16,37 +16,37 @@ import {
 const accessUrl = new URL("../Blead/facilitator/access/index.html", import.meta.url);
 const dashboardUrl = new URL("../Blead/facilitator/index.html", import.meta.url);
 
-test("facilitator pages are private, deterministic, and contain no secret", async () => {
+test("legacy facilitator pages are deterministic noindex redirects without secrets", async () => {
   assert.equal(existsSync(accessUrl), true);
   assert.equal(existsSync(dashboardUrl), true);
   const access = await readFile(accessUrl, "utf8");
   const dashboard = await readFile(dashboardUrl, "utf8");
 
-  assert.match(access, /KAINDLY Facilitator Access/);
-  assert.match(access, /action="\/Blead\/facilitator\/access\/"/);
-  assert.match(dashboard, /Responses are retained through February 28, 2027/);
-  assert.match(dashboard, /Export CSV/);
-  assert.match(dashboard, /href="\/Blead\/facilitator\/api\/export\.csv"/);
-  assert.match(dashboard, /data-response-filter/);
-  assert.match(dashboard, /data-response-count/);
-  assert.match(dashboard, /data-dashboard-loading/);
-  assert.match(dashboard, /data-dashboard-empty/);
-  assert.match(dashboard, /data-dashboard-error/);
-  assert.match(dashboard, /action="\/Blead\/facilitator\/logout\/"/);
-  assert.match(`${access}${dashboard}`, /<meta name="robots" content="noindex, nofollow">/);
+  for (const page of [access, dashboard]) {
+    assert.match(page, /<meta name="robots" content="noindex, nofollow">/);
+    assert.match(page, /<meta http-equiv="refresh" content="0;url=\/dashboard\/">/);
+    assert.match(page, /<a href="\/dashboard\/">/);
+    assert.doesNotMatch(page, /<form|type="password"|blead-facilitator\.js/iu);
+  }
   assert.doesNotMatch(`${access}${dashboard}`, /test-facilitator-password/iu);
   assert.equal(access, renderBleadFacilitatorAccess());
   assert.equal(dashboard, renderBleadFacilitatorDashboard());
 });
 
-test("facilitator dashboard exposes only anonymous response language", async () => {
-  const dashboard = await readFile(dashboardUrl, "utf8");
-  const visibleText = dashboard.replace(/<[^>]+>/gu, " ").replace(/\s+/gu, " ");
-
-  assert.match(visibleText, /anonymous participant responses/i);
-  assert.doesNotMatch(visibleText, /participant name|participant email/iu);
-  assert.match(dashboard, /src="\/assets\/js\/blead-facilitator\.js"/);
-  assert.match(dashboard, /href="\/assets\/css\/blead-facilitator\.css"/);
+test("legacy facilitator entry routes permanently redirect to the unified dashboard", async () => {
+  const previous = process.env.VERCEL_ENV;
+  process.env.VERCEL_ENV = "development";
+  try {
+    const { default: middleware } = await import("../middleware.js");
+    for (const pathname of ["/Blead/facilitator/", "/Blead/facilitator/access/"]) {
+      const response = await middleware(new Request(`https://www.kaindly.ai${pathname}`));
+      assert.equal(response.status, 308);
+      assert.equal(response.headers.get("location"), "/dashboard/");
+    }
+  } finally {
+    if (previous === undefined) delete process.env.VERCEL_ENV;
+    else process.env.VERCEL_ENV = previous;
+  }
 });
 
 const rows = [

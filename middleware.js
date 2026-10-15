@@ -253,6 +253,17 @@ function redirect(location, headers = {}) {
   });
 }
 
+function permanentRedirect(location) {
+  return new Response(null, {
+    status: 308,
+    headers: {
+      Location: String(location),
+      "Cache-Control": "private, no-store",
+      "X-Robots-Tag": "noindex, nofollow",
+    },
+  });
+}
+
 function nextProtected() {
   const response = next();
   response.headers.set("Cache-Control", "private, no-store");
@@ -416,6 +427,14 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
+  if (
+    url.pathname === "/Blead/facilitator"
+    || url.pathname === "/Blead/facilitator/"
+    || url.pathname === "/Blead/facilitator/access"
+    || url.pathname === "/Blead/facilitator/access/"
+  ) {
+    return permanentRedirect("/dashboard/");
+  }
   if (isProtectedDashboardPath(url.pathname)) {
     return handleDashboardRoute(request);
   }

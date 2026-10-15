@@ -271,15 +271,15 @@ const facilitatorEnvironment = {
   BLEAD_FACILITATOR_SESSION_SECRET: "facilitator-test-secret-with-adequate-length",
 };
 
-test("facilitator routes require their own valid session", async () => {
+test("legacy facilitator entry routes redirect regardless of the old session state", async () => {
   const { default: middleware, isFacilitatorPath } = await import("../middleware.js");
   await withBleadEnvironment(facilitatorEnvironment, async () => {
     assert.equal(isFacilitatorPath("/Blead/facilitator/"), true);
     assert.equal(isFacilitatorPath("/Blead/session-1-prompts/"), false);
 
     const missing = await middleware(new Request("https://www.kaindly.ai/Blead/facilitator/"));
-    assert.equal(missing.status, 303);
-    assert.equal(new URL(missing.headers.get("location")).pathname, "/Blead/facilitator/access/");
+    assert.equal(missing.status, 308);
+    assert.equal(missing.headers.get("location"), "/dashboard/");
 
     const participant = await signBleadSession({
       expiresAt: Date.now() + 60_000,
@@ -289,7 +289,8 @@ test("facilitator routes require their own valid session", async () => {
       "https://www.kaindly.ai/Blead/facilitator/",
       { headers: { cookie: `${BLEAD_COOKIE_NAME}=${participant}` } },
     ));
-    assert.equal(participantOnly.status, 303);
+    assert.equal(participantOnly.status, 308);
+    assert.equal(participantOnly.headers.get("location"), "/dashboard/");
 
     const facilitator = await signBleadFacilitatorSession({
       expiresAt: Date.now() + 60_000,
@@ -299,11 +300,12 @@ test("facilitator routes require their own valid session", async () => {
       "https://www.kaindly.ai/Blead/facilitator/",
       { headers: { cookie: `${BLEAD_FACILITATOR_COOKIE_NAME}=${facilitator}` } },
     ));
-    assert.equal(accepted.headers.get("x-middleware-next"), "1");
+    assert.equal(accepted.status, 308);
+    assert.equal(accepted.headers.get("location"), "/dashboard/");
   });
 });
 
-test("facilitator access sets only the facilitator cookie and hides the password", async () => {
+test("legacy facilitator access redirects without processing the old password", async () => {
   const { default: middleware } = await import("../middleware.js");
   await withBleadEnvironment(facilitatorEnvironment, async () => {
     const body = new URLSearchParams({
@@ -322,14 +324,9 @@ test("facilitator access sets only the facilitator cookie and hides the password
       },
     ));
 
-    assert.equal(response.status, 303);
-    assert.equal(response.headers.get("location"), "/Blead/facilitator/");
-    assert.match(response.headers.get("set-cookie"), new RegExp(`^${BLEAD_FACILITATOR_COOKIE_NAME}=`));
-    assert.doesNotMatch(response.headers.get("set-cookie"), new RegExp(BLEAD_COOKIE_NAME));
-    assert.doesNotMatch(
-      `${response.headers.get("location")}${response.headers.get("set-cookie")}`,
-      /test-facilitator-password/u,
-    );
+    assert.equal(response.status, 308);
+    assert.equal(response.headers.get("location"), "/dashboard/");
+    assert.equal(response.headers.get("set-cookie"), null);
   });
 });
 
@@ -348,11 +345,12 @@ test("facilitator logout clears only its narrowly scoped cookie", async () => {
   });
 });
 
-test("missing facilitator configuration fails closed without breaking participant pages", async () => {
+test("legacy facilitator redirects do not depend on old configuration", async () => {
   const { default: middleware } = await import("../middleware.js");
   await withBleadEnvironment(testEnvironment, async () => {
     const facilitator = await middleware(new Request("https://www.kaindly.ai/Blead/facilitator/"));
-    assert.equal(facilitator.status, 503);
+    assert.equal(facilitator.status, 308);
+    assert.equal(facilitator.headers.get("location"), "/dashboard/");
 
     const participant = await signBleadSession({
       expiresAt: Date.now() + 60_000,
