@@ -2,6 +2,14 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/dashboard/api/responses",
+      "destination": "/api/dashboard-responses"
+    },
+    {
+      "source": "/dashboard/api/export.csv",
+      "destination": "/api/dashboard-export"
+    },
+    {
       "source": "/Blead/facilitator/api/responses",
       "destination": "/api/blead-facilitator-responses"
     },
