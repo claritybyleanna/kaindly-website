@@ -251,6 +251,13 @@ test("auth configuration endpoint returns only the publishable key with private 
   }
 });
 
+test("Vercel routes the public dashboard auth configuration URL to its physical function", async () => {
+  const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
+  assert.ok(config.rewrites.some(({ source, destination }) => (
+    source === "/dashboard/api/auth-config" && destination === "/api/dashboard-auth-config"
+  )));
+});
+
 test("auth configuration endpoint fails closed when either Clerk key is malformed or mismatched", async () => {
   const previous = {
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
@@ -367,9 +374,10 @@ test("browser auth entry bundles for the browser with the installed Clerk SDK", 
   assert.doesNotMatch(bundle, /CLERK_SECRET_KEY|sk_(?:test|live)_|leanna\.baker@kaindly\.ai/u);
 });
 
-test("middleware leaves only dashboard access, verification, and auth config public", async () => {
+test("middleware protects dashboard HTML but passes pretty dashboard APIs to their own authorizers", async () => {
   const {
     handleDashboardRoute,
+    isDashboardFunctionPath,
     isDashboardPublicPath,
     isProtectedDashboardPath,
   } = await import("../middleware.js");
@@ -387,6 +395,19 @@ test("middleware leaves only dashboard access, verification, and auth config pub
     assert.equal(isDashboardPublicPath(pathname), true);
     const response = await handleDashboardRoute(new Request(`https://www.kaindly.ai${pathname}`), {
       authorize: async () => { throw new Error("public route must not authenticate"); },
+    });
+    assert.equal(response.headers.get("x-middleware-next"), "1");
+    assert.equal(response.headers.get("cache-control"), "private, no-store");
+    assert.equal(response.headers.get("x-robots-tag"), "noindex, nofollow");
+  }
+
+  for (const pathname of [
+    "/dashboard/api/responses",
+    "/dashboard/api/export.csv",
+  ]) {
+    assert.equal(isDashboardFunctionPath(pathname), true);
+    const response = await handleDashboardRoute(new Request(`https://www.kaindly.ai${pathname}`), {
+      authorize: async () => { throw new Error("pretty API must defer to its physical function"); },
     });
     assert.equal(response.headers.get("x-middleware-next"), "1");
     assert.equal(response.headers.get("cache-control"), "private, no-store");

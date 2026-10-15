@@ -55,10 +55,10 @@
           <label class="dashboard-filter dashboard-filter--search"><span>Response text</span><input type="search" name="search" placeholder="Search saved responses" autocomplete="off" data-dashboard-filter="search"></label>
           <div class="dashboard-filter-actions"><button class="dashboard-button dashboard-button--secondary" type="submit">Apply filters</button><button class="dashboard-clear" type="button" data-dashboard-clear>Clear filters</button></div>
         </form>
-        <p class="dashboard-state" data-dashboard-loading>Loading responses…</p>
-        <p class="dashboard-state" data-dashboard-empty hidden>No responses match these filters.</p>
-        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Email yourself a new sign-in link</a> to continue.</p></div>
-        <div class="dashboard-state dashboard-state--alert" data-dashboard-unavailable hidden><h3>The dashboard is temporarily unavailable.</h3><p>Please try again shortly.</p><button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-retry>Try again</button></div>
+        <p class="dashboard-state" data-dashboard-loading role="status" aria-live="polite">Loading responses…</p>
+        <p class="dashboard-state" data-dashboard-empty role="status" aria-live="polite" hidden>No responses match these filters.</p>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized role="alert" aria-live="assertive" hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Email yourself a new sign-in link</a> to continue.</p></div>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unavailable role="alert" aria-live="assertive" hidden><h3>The dashboard is temporarily unavailable.</h3><p>Please try again shortly.</p><button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-retry>Try again</button></div>
         <div class="dashboard-responses" data-dashboard-responses aria-live="polite"></div>
       </div>
     </section>

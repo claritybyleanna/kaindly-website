@@ -235,6 +235,13 @@ export function isDashboardPublicPath(pathname) {
     || pathname === "/dashboard/api/auth-config/";
 }
 
+export function isDashboardFunctionPath(pathname) {
+  return pathname === "/dashboard/api/responses"
+    || pathname === "/dashboard/api/responses/"
+    || pathname === "/dashboard/api/export.csv"
+    || pathname === "/dashboard/api/export.csv/";
+}
+
 function redirect(location, headers = {}) {
   return new Response(null, {
     status: 303,
@@ -264,7 +271,9 @@ export async function handleDashboardRoute(
   { authorize = authorizeDashboardRequest } = {},
 ) {
   const url = new URL(request.url);
-  if (isDashboardPublicPath(url.pathname)) return nextProtected();
+  if (isDashboardPublicPath(url.pathname) || isDashboardFunctionPath(url.pathname)) {
+    return nextProtected();
+  }
 
   let identity = null;
   try {

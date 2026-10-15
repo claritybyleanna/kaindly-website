@@ -12,9 +12,11 @@ import {
   buildDashboardQuery,
   createResponseValue,
   filterParticipantOptions,
+  filterRelationalDashboardOptions,
   groupDashboardResponses,
   initializeDashboard,
   loadDashboardResponses,
+  reconcileDashboardFilterValues,
 } from "../assets/js/dashboard.js";
 
 const generatedPages = [
@@ -70,6 +72,14 @@ test("dashboard shell exposes the complete facilitator workflow", () => {
   }
   assert.match(html, /href="\/dashboard\/api\/export\.csv"/u);
   assert.match(html, /\/assets\/js\/dashboard\.js/u);
+});
+
+test("announces dashboard progress politely and failures assertively", () => {
+  const html = renderDashboardShell();
+  assert.match(html, /data-dashboard-loading role="status" aria-live="polite"/u);
+  assert.match(html, /data-dashboard-empty role="status" aria-live="polite"/u);
+  assert.match(html, /data-dashboard-unauthorized role="alert" aria-live="assertive"/u);
+  assert.match(html, /data-dashboard-unavailable role="alert" aria-live="assertive"/u);
 });
 
 test("serializes one canonical query for screen data and CSV export", () => {
@@ -134,6 +144,64 @@ test("offers participant IDs only after their exact workbook is selected", () =>
   ]);
 });
 
+function dashboardRelationalFilters() {
+  return {
+    clients: [{ id: "client-a", name: "Client A" }, { id: "client-b", name: "Client B" }],
+    programs: [
+      { id: "program-a", name: "Program A", clientId: "client-a" },
+      { id: "program-b", name: "Program B", clientId: "client-b" },
+    ],
+    workbooks: [
+      { id: "workbook-a", name: "Workbook A", clientId: "client-a", programId: "program-a" },
+      { id: "workbook-b", name: "Workbook B", clientId: "client-b", programId: "program-b" },
+    ],
+    exercises: [
+      { id: "exercise-a", title: "Exercise A", workbookId: "workbook-a" },
+      { id: "exercise-b", title: "Exercise B", workbookId: "workbook-b" },
+      { id: "shared", title: "Shared in A", workbookId: "workbook-a" },
+      { id: "shared", title: "Shared in B", workbookId: "workbook-b" },
+    ],
+    participants: [
+      { id: "participant-a", workbookId: "workbook-a" },
+      { id: "participant-b", workbookId: "workbook-b" },
+    ],
+  };
+}
+
+test("clears incompatible descendants and exposes only relational filter options", () => {
+  const filters = dashboardRelationalFilters();
+
+  assert.deepEqual(reconcileDashboardFilterValues({
+    client: "client-a",
+    program: "program-b",
+    workbook: "workbook-b",
+    exercise: "exercise-b",
+    participant: "participant-b",
+    search: "coaching",
+  }, filters), {
+    client: "client-a",
+    search: "coaching",
+  });
+
+  assert.deepEqual(reconcileDashboardFilterValues({
+    client: "client-a",
+    exercise: "shared",
+  }, filters), {
+    client: "client-a",
+    exercise: "shared",
+  });
+
+  const compatible = filterRelationalDashboardOptions(filters, {
+    client: "client-a",
+    program: "program-a",
+    workbook: "workbook-a",
+  });
+  assert.deepEqual(compatible.programs.map(({ id }) => id), ["program-a"]);
+  assert.deepEqual(compatible.workbooks.map(({ id }) => id), ["workbook-a"]);
+  assert.deepEqual(compatible.exercises.map(({ id }) => id), ["exercise-a", "shared"]);
+  assert.deepEqual(compatible.participants.map(({ id }) => id), ["participant-a"]);
+});
+
 test("renders hostile participant content through textContent without HTML parsing", () => {
   const fakeDocument = {
     innerHtmlWrites: 0,
@@ -194,44 +262,44 @@ test("maps loading failures to private access or retryable unavailable states", 
   assert.equal(empty.kind, "empty");
 });
 
-test("loads a bookmarked filter query before empty select controls can erase it", async () => {
-  class Node {
-    constructor() {
-      this.children = [];
-      this.value = "";
-      this.hidden = false;
-      this.listeners = new Map();
-    }
-
-    append(...nodes) { this.children.push(...nodes); }
-    replaceChildren(...nodes) { this.children = nodes; }
-    setAttribute(name, value) { this[name] = String(value); }
-    addEventListener(name, listener) { this.listeners.set(name, listener); }
-    set textContent(value) { this._textContent = String(value); }
-    get textContent() { return this._textContent ?? ""; }
-    reset() { for (const control of Object.values(this.elements ?? {})) control.value = ""; }
+class DashboardTestNode {
+  constructor() {
+    this.children = [];
+    this.value = "";
+    this.hidden = false;
+    this.listeners = new Map();
   }
 
-  const form = new Node();
+  append(...nodes) { this.children.push(...nodes); }
+  replaceChildren(...nodes) { this.children = nodes; }
+  setAttribute(name, value) { this[name] = String(value); }
+  addEventListener(name, listener) { this.listeners.set(name, listener); }
+  set textContent(value) { this._textContent = String(value); }
+  get textContent() { return this._textContent ?? ""; }
+  reset() { for (const control of Object.values(this.elements ?? {})) control.value = ""; }
+}
+
+function dashboardTestHarness() {
+  const form = new DashboardTestNode();
   form.elements = Object.fromEntries([
     "client", "program", "workbook", "exercise", "participant", "from", "to", "search",
-  ].map((name) => [name, Object.assign(new Node(), { name })]));
+  ].map((name) => [name, Object.assign(new DashboardTestNode(), { name })]));
   form.querySelectorAll = () => Object.values(form.elements).filter(({ name }) => (
     ["client", "program", "workbook", "exercise", "participant"].includes(name)
   ));
   const nodes = new Map([
     ["[data-dashboard-filters]", form],
-    ["[data-dashboard-directory]", new Node()],
-    ["[data-dashboard-responses]", new Node()],
-    ["[data-dashboard-export]", new Node()],
-    ["[data-dashboard-loading]", new Node()],
-    ["[data-dashboard-empty]", new Node()],
-    ["[data-dashboard-unauthorized]", new Node()],
-    ["[data-dashboard-unavailable]", new Node()],
-    ["[data-dashboard-clear]", new Node()],
-    ["[data-dashboard-retry]", new Node()],
+    ["[data-dashboard-directory]", new DashboardTestNode()],
+    ["[data-dashboard-responses]", new DashboardTestNode()],
+    ["[data-dashboard-export]", new DashboardTestNode()],
+    ["[data-dashboard-loading]", new DashboardTestNode()],
+    ["[data-dashboard-empty]", new DashboardTestNode()],
+    ["[data-dashboard-unauthorized]", new DashboardTestNode()],
+    ["[data-dashboard-unavailable]", new DashboardTestNode()],
+    ["[data-dashboard-clear]", new DashboardTestNode()],
+    ["[data-dashboard-retry]", new DashboardTestNode()],
     ...["clients", "workbooks", "participants", "responses"].map((name) => (
-      [`[data-summary-${name}]`, new Node()]
+      [`[data-summary-${name}]`, new DashboardTestNode()]
     )),
     ...Object.entries(form.elements).map(([name, node]) => (
       [`[data-dashboard-filter="${name}"]`, node]
@@ -239,28 +307,49 @@ test("loads a bookmarked filter query before empty select controls can erase it"
   ]);
   const documentRef = {
     querySelector: (selector) => nodes.get(selector) ?? null,
-    createElement: () => new Node(),
+    createElement: () => new DashboardTestNode(),
   };
+  return {
+    documentRef,
+    form,
+    nodes,
+    formValuesReader: (target) => Object.fromEntries(
+      Object.entries(target.elements).map(([name, control]) => [name, control.value]),
+    ),
+  };
+}
+
+function emptyDashboardPayload(responseCount = 0) {
+  return {
+    summary: { clients: 0, workbooks: 0, participants: 0, responses: responseCount },
+    directory: [],
+    filters: { clients: [], programs: [], workbooks: [], exercises: [], participants: [] },
+    responses: [],
+  };
+}
+
+function relationalDashboardPayload() {
+  return {
+    ...emptyDashboardPayload(),
+    filters: dashboardRelationalFilters(),
+  };
+}
+
+test("loads a bookmarked filter query before empty select controls can erase it", async () => {
+  const { documentRef, formValuesReader } = dashboardTestHarness();
   const requested = [];
   const dashboard = initializeDashboard({
     documentRef,
     historyRef: { replaceState() {} },
     locationRef: { pathname: "/dashboard/", search: "?client=bracco&workbook=bracco-sales-ai-brain" },
-    formValuesReader: (target) => Object.fromEntries(
-      Object.entries(target.elements).map(([name, control]) => [name, control.value]),
-    ),
+    formValuesReader,
     fetchImpl: async (url) => {
       requested.push(url);
       return {
         status: 200,
         ok: true,
         async json() {
-          return {
-            summary: { clients: 0, workbooks: 0, participants: 0, responses: 0 },
-            directory: [],
-            filters: { clients: [], programs: [], workbooks: [], exercises: [], participants: [] },
-            responses: [],
-          };
+          return emptyDashboardPayload();
         },
       };
     },
@@ -268,4 +357,62 @@ test("loads a bookmarked filter query before empty select controls can erase it"
   await dashboard.ready;
 
   assert.equal(requested[0], "/dashboard/api/responses?client=bracco&workbook=bracco-sales-ai-brain");
+});
+
+test("a slower earlier request cannot overwrite the newest dashboard state", async () => {
+  const { documentRef, form, nodes, formValuesReader } = dashboardTestHarness();
+  const requests = [];
+  const fetchImpl = (url, options) => new Promise((resolve) => requests.push({ url, options, resolve }));
+  const dashboard = initializeDashboard({
+    documentRef,
+    historyRef: { replaceState() {} },
+    locationRef: { pathname: "/dashboard/", search: "" },
+    formValuesReader,
+    fetchImpl,
+  });
+
+  form.elements.search.value = "newest";
+  form.listeners.get("submit")({ preventDefault() {} });
+  assert.equal(requests.length, 2);
+  assert.equal(requests[0].options.signal.aborted, true);
+
+  requests[1].resolve({ status: 200, ok: true, async json() { return emptyDashboardPayload(2); } });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(nodes.get("[data-summary-responses]").textContent, "2");
+
+  requests[0].resolve({ status: 200, ok: true, async json() { return emptyDashboardPayload(1); } });
+  await dashboard.ready;
+  assert.equal(nodes.get("[data-summary-responses]").textContent, "2");
+  assert.equal(nodes.get("[data-dashboard-loading]").hidden, true);
+});
+
+test("normal filter changes clear incompatible descendants before requesting data", async () => {
+  const { documentRef, form, formValuesReader } = dashboardTestHarness();
+  const requested = [];
+  const dashboard = initializeDashboard({
+    documentRef,
+    historyRef: { replaceState() {} },
+    locationRef: { pathname: "/dashboard/", search: "" },
+    formValuesReader,
+    fetchImpl: async (url) => {
+      requested.push(url);
+      return { status: 200, ok: true, async json() { return relationalDashboardPayload(); } };
+    },
+  });
+  await dashboard.ready;
+
+  form.elements.client.value = "client-a";
+  form.elements.program.value = "program-b";
+  form.elements.workbook.value = "workbook-b";
+  form.elements.exercise.value = "exercise-b";
+  form.elements.participant.value = "participant-b";
+  form.elements.search.value = "coaching";
+  form.elements.client.listeners.get("change")();
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(form.elements.program.value, "");
+  assert.equal(form.elements.workbook.value, "");
+  assert.equal(form.elements.exercise.value, "");
+  assert.equal(form.elements.participant.value, "");
+  assert.equal(requested.at(-1), "/dashboard/api/responses?client=client-a&search=coaching");
 });

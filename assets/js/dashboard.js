@@ -57,6 +57,86 @@ export function filterParticipantOptions(options = [], workbookId = "") {
   return options.filter((option) => option.workbookId === workbookId);
 }
 
+function normalizedFilterObject(values = {}) {
+  return Object.fromEntries(FILTER_NAMES.flatMap((name) => {
+    const value = stringValue(typeof values.get === "function" ? values.get(name) : values[name]);
+    return value ? [[name, value]] : [];
+  }));
+}
+
+export function reconcileDashboardFilterValues(values = {}, filters = {}) {
+  const next = normalizedFilterObject(values);
+  const programs = new Map((filters.programs ?? []).map((entry) => [entry.id, entry]));
+  const workbooks = new Map((filters.workbooks ?? []).map((entry) => [entry.id, entry]));
+  const exercises = filters.exercises ?? [];
+  const participants = new Map((filters.participants ?? []).map((entry) => [
+    `${entry.workbookId}:${entry.id}`,
+    entry,
+  ]));
+
+  const selectedProgram = next.program ? programs.get(next.program) : null;
+  const programInvalid = Boolean(next.program) && (
+    !selectedProgram || (next.client && selectedProgram.clientId !== next.client)
+  );
+  if (programInvalid) delete next.program;
+
+  const selectedWorkbook = next.workbook ? workbooks.get(next.workbook) : null;
+  const workbookInvalid = Boolean(next.workbook) && (
+    programInvalid
+    || !selectedWorkbook
+    || (next.client && selectedWorkbook.clientId !== next.client)
+    || (next.program && selectedWorkbook.programId !== next.program)
+  );
+  if (workbookInvalid) delete next.workbook;
+
+  if (next.exercise) {
+    const matchingExercises = exercises.filter(({ id }) => id === next.exercise);
+    const exerciseIsCompatible = matchingExercises.some((exercise) => {
+      const exerciseWorkbook = workbooks.get(exercise.workbookId);
+      return exerciseWorkbook
+        && (!next.workbook || exercise.workbookId === next.workbook)
+        && (!next.client || exerciseWorkbook.clientId === next.client)
+        && (!next.program || exerciseWorkbook.programId === next.program);
+    });
+    if (
+      workbookInvalid
+      || !exerciseIsCompatible
+    ) {
+      delete next.exercise;
+    }
+  }
+
+  if (
+    !next.workbook
+    || !next.participant
+    || !participants.has(`${next.workbook}:${next.participant}`)
+  ) {
+    delete next.participant;
+  }
+
+  return next;
+}
+
+export function filterRelationalDashboardOptions(filters = {}, values = {}) {
+  const selected = normalizedFilterObject(values);
+  const workbooks = (filters.workbooks ?? []).filter((entry) => (
+    (!selected.client || entry.clientId === selected.client)
+    && (!selected.program || entry.programId === selected.program)
+  ));
+  const permittedWorkbookIds = new Set(workbooks.map(({ id }) => id));
+  return {
+    clients: filters.clients ?? [],
+    programs: (filters.programs ?? []).filter((entry) => (
+      !selected.client || entry.clientId === selected.client
+    )),
+    workbooks,
+    exercises: (filters.exercises ?? []).filter((entry) => (
+      selected.workbook ? entry.workbookId === selected.workbook : permittedWorkbookIds.has(entry.workbookId)
+    )),
+    participants: filterParticipantOptions(filters.participants, selected.workbook),
+  };
+}
+
 function element(documentRef, tagName, className, text) {
   const node = documentRef.createElement(tagName);
   if (className) node.className = className;
@@ -148,19 +228,22 @@ export function renderDashboardResponses(documentRef, root, responses = []) {
   root.replaceChildren(...cards);
 }
 
-export async function loadDashboardResponses({ query, fetchImpl = globalThis.fetch } = {}) {
+export async function loadDashboardResponses({ query, fetchImpl = globalThis.fetch, signal } = {}) {
   const suffix = query?.toString() ? `?${query.toString()}` : "";
   try {
-    const response = await fetchImpl(`/dashboard/api/responses${suffix}`, {
+    const options = {
       credentials: "same-origin",
       headers: { Accept: "application/json" },
-    });
+    };
+    if (signal) options.signal = signal;
+    const response = await fetchImpl(`/dashboard/api/responses${suffix}`, options);
     if (response.status === 401) return { kind: "unauthorized" };
     if (!response.ok) return { kind: "unavailable" };
     const data = await response.json();
     if (!data || !Array.isArray(data.responses)) return { kind: "unavailable" };
     return { kind: data.responses.length ? "loaded" : "empty", data };
   } catch {
+    if (signal?.aborted) return { kind: "aborted" };
     return { kind: "unavailable" };
   }
 }
@@ -217,6 +300,9 @@ export function initializeDashboard({
   const clear = documentRef.querySelector("[data-dashboard-clear]");
   const retry = documentRef.querySelector("[data-dashboard-retry]");
   let pendingQuery = buildDashboardQuery(new URLSearchParams(locationRef?.search ?? ""));
+  let filterMetadata = null;
+  let activeController = null;
+  let loadSequence = 0;
 
   function currentQuery() {
     if (pendingQuery) return new URLSearchParams(pendingQuery);
@@ -229,7 +315,19 @@ export function initializeDashboard({
     historyRef?.replaceState?.({}, "", `${locationRef.pathname}${suffix}`);
   }
 
+  function reconcileForm() {
+    if (!form || !filterMetadata) return;
+    const selected = reconcileDashboardFilterValues(formValuesReader(form), filterMetadata);
+    for (const name of FILTER_NAMES) {
+      if (form.elements?.[name]) form.elements[name].value = selected[name] ?? "";
+    }
+  }
+
   async function load() {
+    const sequence = ++loadSequence;
+    activeController?.abort();
+    const controller = new AbortController();
+    activeController = controller;
     const query = currentQuery();
     reflectQuery(query);
     setHidden(loading, false);
@@ -237,8 +335,11 @@ export function initializeDashboard({
     setHidden(unauthorized, true);
     setHidden(unavailable, true);
     responseRoot?.replaceChildren();
-    const result = await loadDashboardResponses({ query, fetchImpl });
+    const result = await loadDashboardResponses({ query, fetchImpl, signal: controller.signal });
+    if (sequence !== loadSequence) return;
+    activeController = null;
     setHidden(loading, true);
+    if (result.kind === "aborted") return;
     if (result.kind === "unauthorized") {
       setHidden(unauthorized, false);
       return;
@@ -250,15 +351,17 @@ export function initializeDashboard({
     const { data } = result;
     updateSummary(documentRef, data.summary);
     renderDirectory(documentRef, directory, data.directory);
-    const selected = Object.fromEntries(currentQuery());
-    updateSelect(documentRef, "client", data.filters.clients, selected.client);
-    updateSelect(documentRef, "program", data.filters.programs, selected.program);
-    updateSelect(documentRef, "workbook", data.filters.workbooks, selected.workbook);
-    updateSelect(documentRef, "exercise", data.filters.exercises, selected.exercise);
+    filterMetadata = data.filters;
+    const selected = reconcileDashboardFilterValues(Object.fromEntries(query), filterMetadata);
+    const options = filterRelationalDashboardOptions(filterMetadata, selected);
+    updateSelect(documentRef, "client", options.clients, selected.client);
+    updateSelect(documentRef, "program", options.programs, selected.program);
+    updateSelect(documentRef, "workbook", options.workbooks, selected.workbook);
+    updateSelect(documentRef, "exercise", options.exercises, selected.exercise);
     updateSelect(
       documentRef,
       "participant",
-      filterParticipantOptions(data.filters.participants, selected.workbook),
+      options.participants,
       selected.participant,
     );
     const participantSelect = documentRef.querySelector('[data-dashboard-filter="participant"]');
@@ -271,15 +374,13 @@ export function initializeDashboard({
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     pendingQuery = null;
+    reconcileForm();
     void load();
   });
   for (const select of form?.querySelectorAll?.("select") ?? []) {
     select.addEventListener("change", () => {
       pendingQuery = null;
-      if (select.name === "workbook") {
-        const participant = form.elements?.participant;
-        if (participant) participant.value = "";
-      }
+      reconcileForm();
       void load();
     });
   }
