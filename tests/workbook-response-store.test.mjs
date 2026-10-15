@@ -143,7 +143,7 @@ test("invalid dashboard filters fail before any query runs", async (t) => {
   }
 });
 
-test("countDashboard applies the same parameterized filters", async () => {
+test("countDashboard counts workbook-scoped participant identities", async () => {
   const returned = [{ clients: 1, workbooks: 2, participants: 3, responses: 4 }];
   const { calls, query } = queryRecorder(returned);
   const store = createWorkbookResponseStore(query);
@@ -152,7 +152,10 @@ test("countDashboard applies the same parameterized filters", async () => {
 
   assert.match(calls[0].text, /COUNT\(DISTINCT client_id\)::integer AS clients/iu);
   assert.match(calls[0].text, /COUNT\(DISTINCT workbook_id\)::integer AS workbooks/iu);
-  assert.match(calls[0].text, /COUNT\(DISTINCT participant_id\)::integer AS participants/iu);
+  assert.match(
+    calls[0].text,
+    /COUNT\(DISTINCT \(workbook_id, participant_id\)\)::integer AS participants/iu,
+  );
   assert.match(calls[0].text, /COUNT\(\*\)::integer AS responses/iu);
   assert.match(calls[0].text, /program_id = \$1/iu);
   assert.match(calls[0].text, /payload::text ILIKE \$2/iu);
