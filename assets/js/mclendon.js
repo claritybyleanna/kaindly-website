@@ -1,15 +1,101 @@
-const WORKBOOK_STORAGE_PREFIX = "kaindly-mclendon-workbook:";
+import { initializeWorkbookSync } from "./workbook-sync.js";
 
-function storageKey(promptId) {
-  return `${WORKBOOK_STORAGE_PREFIX}${promptId}`;
+const MCLENDON_WORKBOOK_ID = "mclendon-working-smarter";
+const MCLENDON_ENDPOINT = "/McLendon/api/responses";
+const LEGACY_STORAGE_PREFIX = "kaindly-mclendon-workbook:";
+
+function workbookNotesKey(exerciseId) {
+  return `kaindly:workbook:${MCLENDON_WORKBOOK_ID}:exercise:${exerciseId}:notes`;
 }
 
-export function loadWorkbookNote(storage, promptId) {
-  return storage.getItem(storageKey(promptId)) || "";
+function readStorage(storage, key) {
+  try {
+    return storage?.getItem(key) ?? null;
+  } catch {
+    return null;
+  }
 }
 
-export function saveWorkbookNote(storage, promptId, note) {
-  storage.setItem(storageKey(promptId), note);
+function writeStorage(storage, key, value) {
+  try {
+    storage?.setItem(key, value);
+  } catch {
+    // The shared sync engine remains usable when browser storage is unavailable.
+  }
+}
+
+function exerciseIdFrom(card) {
+  return card.querySelector("[data-workbook-note]")?.dataset.workbookNote;
+}
+
+function noteFrom(card) {
+  return card.querySelector("[data-workbook-note]");
+}
+
+export function migrateLegacyWorkbookNotes(storage, cards) {
+  for (const card of cards) {
+    const exerciseId = exerciseIdFrom(card);
+    if (!exerciseId) continue;
+    const currentKey = workbookNotesKey(exerciseId);
+    if (String(readStorage(storage, currentKey) ?? "").length > 0) continue;
+    const legacyNote = readStorage(storage, `${LEGACY_STORAGE_PREFIX}${exerciseId}`);
+    if (String(legacyNote ?? "").length > 0) writeStorage(storage, currentKey, legacyNote);
+  }
+}
+
+export function collectMclendonSnapshot(card, participantId) {
+  return {
+    participantId,
+    exerciseId: exerciseIdFrom(card),
+    fields: {},
+    notes: noteFrom(card)?.value ?? "",
+  };
+}
+
+export function hydrateMclendonFromServer(card, row) {
+  const note = noteFrom(card);
+  if (!note || String(note.value ?? "").length > 0 || !row?.payload?.notes) return false;
+  note.value = String(row.payload.notes);
+  return true;
+}
+
+export function initializeMclendonResponseSync({
+  documentRoot = globalThis.document,
+  storage = globalThis.localStorage,
+  cryptoApi = globalThis.crypto,
+  fetchImpl = globalThis.fetch,
+  delay = 750,
+  timers = globalThis,
+  windowRoot = globalThis.window,
+  navigatorRoot = globalThis.navigator,
+  BlobConstructor = globalThis.Blob,
+} = {}) {
+  if (!documentRoot) {
+    return { ready: Promise.resolve(), whenIdle: () => Promise.resolve() };
+  }
+
+  const cards = [...documentRoot.querySelectorAll("[data-workbook-prompt]")];
+  migrateLegacyWorkbookNotes(storage, cards);
+
+  return initializeWorkbookSync({
+    workbookId: MCLENDON_WORKBOOK_ID,
+    endpoint: MCLENDON_ENDPOINT,
+    cards,
+    collectSnapshot: collectMclendonSnapshot,
+    hydrateSnapshot: hydrateMclendonFromServer,
+    storage,
+    cryptoApi,
+    fetchImpl,
+    documentRoot,
+    windowRoot,
+    navigatorRoot,
+    BlobConstructor,
+    delay,
+    timers,
+    getFields: () => [],
+    getNotes: noteFrom,
+    getExerciseId: exerciseIdFrom,
+  });
 }
 
 export async function copyWorkbookPrompt(clipboard, promptText) {
@@ -26,14 +112,12 @@ function promptTextFrom(container) {
     .join("\n\n");
 }
 
-function initializeWorkbook() {
-  const prompts = document.querySelectorAll("[data-workbook-prompt]");
+export function initializeWorkbook(root = document) {
+  const prompts = root.querySelectorAll("[data-workbook-prompt]");
 
   for (const prompt of prompts) {
     const copyButton = prompt.querySelector("[data-copy-prompt]");
     const copyStatus = prompt.querySelector("[data-copy-status]");
-    const notes = prompt.querySelector("[data-workbook-note]");
-    const noteStatus = prompt.querySelector("[data-note-status]");
 
     if (copyButton && copyStatus) {
       copyButton.addEventListener("click", async () => {
@@ -47,24 +131,9 @@ function initializeWorkbook() {
         }
       });
     }
-
-    if (notes && noteStatus) {
-      try {
-        notes.value = loadWorkbookNote(window.localStorage, notes.dataset.workbookNote);
-      } catch {
-        noteStatus.textContent = "Private saving is unavailable in this browser.";
-      }
-
-      notes.addEventListener("input", () => {
-        try {
-          saveWorkbookNote(window.localStorage, notes.dataset.workbookNote, notes.value);
-          noteStatus.textContent = "Saved privately on this device.";
-        } catch {
-          noteStatus.textContent = "Private saving is unavailable in this browser.";
-        }
-      });
-    }
   }
+
+  return initializeMclendonResponseSync({ documentRoot: root });
 }
 
 if (typeof document !== "undefined") initializeWorkbook();

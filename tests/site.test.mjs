@@ -506,17 +506,14 @@ test("McLendon workbook is hidden, interactive, and preserves the full site navi
   const workbookCss = readFileSync("assets/css/mclendon.css", "utf8");
   assert.match(workbookCss, /\.copy-status,[\s\S]*?\.note-status\s*{[^}]*color:\s*var\(--violet\);/);
 
-  const { copyWorkbookPrompt, loadWorkbookNote, saveWorkbookNote } = await import("../assets/js/mclendon.js");
-  const saved = new Map();
-  const storage = {
-    getItem(key) { return saved.has(key) ? saved.get(key) : null; },
-    setItem(key, value) { saved.set(key, value); },
-  };
+  assert.match(html, /Your notes save automatically as you work\./);
+  assert.equal((html.match(/data-note-status>Saved\.<\/p>/g) || []).length, 4);
+  assert.doesNotMatch(html, /Saved privately on this device\.|Your notes stay in this browser on this device\./);
+
+  const { copyWorkbookPrompt } = await import("../assets/js/mclendon.js");
   const copied = [];
   const clipboard = { writeText(value) { copied.push(value); return Promise.resolve(); } };
 
-  saveWorkbookNote(storage, "crisis", "Verify the facts before publishing.");
-  assert.equal(loadWorkbookNote(storage, "crisis"), "Verify the facts before publishing.");
   await copyWorkbookPrompt(clipboard, "Full CRAFT-I prompt");
   assert.deepEqual(copied, ["Full CRAFT-I prompt"]);
 });
