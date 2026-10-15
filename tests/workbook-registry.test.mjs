@@ -72,3 +72,25 @@ test("rejects duplicate global workbook IDs and missing or expired deadlines", (
     deleteAfter: "tomorrow",
   }, FUTURE_NOW), /retention/i);
 });
+
+test("fresh registry imports remain available at and after retention expiry", async (t) => {
+  t.mock.timers.enable({ apis: ["Date"], now: new Date("2027-03-01T06:00:00.000Z") });
+  for (const offset of [0, 1]) {
+    t.mock.timers.setTime(new Date("2027-03-01T06:00:00.000Z").getTime() + offset);
+    const registry = await import(`../lib/workbook-registry.js?expiry-regression=${offset}`);
+    assert.equal(registry.listWorkbookRegistrations().length, 4);
+    assert.equal(registry.getWorkbookRegistration("bracco-leadership-session-1").deleteAfter, "2027-03-01T06:00:00.000Z");
+    assert.throws(() => registry.validateWorkbookRegistration(validRegistration({ key: "new", workbookId: "new" })), /future/i);
+    assert.throws(() => registry.validateRegistry([validRegistration({ key: "new", workbookId: "new" })]), /future/i);
+  }
+});
+
+test("runtime validation accepts expired deadlines but rejects malformed deadlines and duplicate identities", () => {
+  const expired = { ...validRegistration({ key: "old", workbookId: "old" }), deleteAfter: "2026-10-14T00:00:00.000Z" };
+  const runtime = { requireFuture: false };
+  assert.equal(validateWorkbookRegistration(expired, FUTURE_NOW, runtime), expired);
+  for (const deleteAfter of [undefined, "tomorrow", "2027-03-01", "2027-02-30T06:00:00.000Z"]) {
+    assert.throws(() => validateWorkbookRegistration({ ...expired, deleteAfter }, FUTURE_NOW, runtime), /retention|ISO/i);
+  }
+  assert.throws(() => validateRegistry([expired, { ...expired, key: "other" }], FUTURE_NOW, runtime), /duplicate workbook/i);
+});
