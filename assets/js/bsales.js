@@ -1,3 +1,5 @@
+import { initializeWorkbookSync } from "./workbook-sync.js";
+
 export function personalizePrompt(template, replacements) {
   let personalized = String(template ?? "");
   for (const [token, value] of replacements) {
@@ -24,7 +26,7 @@ function initializeMenu(root = document) {
   menu.querySelectorAll("a").forEach((link) => link.addEventListener("click", close));
 }
 
-function initializePromptCard(card) {
+export function initializePromptCard(card) {
   const template = card.querySelector("[data-prompt-template]");
   const preview = card.querySelector("[data-prompt-preview]");
   const button = card.querySelector("[data-copy-prompt]");
@@ -41,6 +43,7 @@ function initializePromptCard(card) {
     status.textContent = "";
   };
   fields.forEach((field) => field.addEventListener("input", update));
+  card.addEventListener("bsales:hydrate", update);
 
   button.addEventListener("click", async () => {
     try {
@@ -60,9 +63,75 @@ function initializePromptCard(card) {
   });
 }
 
-function initializeBsales(root = document) {
+export function collectBsalesSnapshot(card, participantId) {
+  return {
+    participantId,
+    exerciseId: card.dataset.promptId,
+    fields: Object.fromEntries(
+      [...card.querySelectorAll("[data-prompt-field]")]
+        .map((field) => [field.dataset.promptField, field.value]),
+    ),
+    notes: "",
+  };
+}
+
+export function hydrateBsalesFromServer(card, row) {
+  const values = row?.payload?.fields ?? {};
+  let changed = false;
+  for (const field of card.querySelectorAll("[data-prompt-field]")) {
+    if (!String(field.value ?? "").length && Object.hasOwn(values, field.dataset.promptField)) {
+      field.value = String(values[field.dataset.promptField] ?? "");
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+export function initializeBsalesResponseSync({
+  documentRoot = globalThis.document,
+  storage = globalThis.localStorage,
+  cryptoApi = globalThis.crypto,
+  fetchImpl = globalThis.fetch,
+  delay = 750,
+  timers = globalThis,
+  windowRoot = globalThis.window,
+  navigatorRoot = globalThis.navigator,
+  BlobConstructor = globalThis.Blob,
+} = {}) {
+  const workbookId = documentRoot?.body?.dataset?.workbookId;
+  const endpoint = documentRoot?.body?.dataset?.responseEndpoint;
+  if (!documentRoot || !workbookId || !endpoint) {
+    return { ready: Promise.resolve(), whenIdle: () => Promise.resolve() };
+  }
+
+  return initializeWorkbookSync({
+    workbookId,
+    endpoint,
+    cards: documentRoot.querySelectorAll("[data-prompt-card]"),
+    collectSnapshot: collectBsalesSnapshot,
+    hydrateSnapshot: hydrateBsalesFromServer,
+    storage,
+    cryptoApi,
+    fetchImpl,
+    documentRoot,
+    windowRoot,
+    navigatorRoot,
+    BlobConstructor,
+    delay,
+    timers,
+    onHydrate(card) {
+      const EventConstructor = documentRoot.defaultView?.CustomEvent ?? globalThis.CustomEvent;
+      card.dispatchEvent(EventConstructor
+        ? new EventConstructor("bsales:hydrate")
+        : { type: "bsales:hydrate" });
+    },
+  });
+}
+
+export function initializeBsales(root = document) {
   initializeMenu(root);
   root.querySelectorAll("[data-prompt-card]").forEach(initializePromptCard);
+  return initializeBsalesResponseSync({ documentRoot: root });
 }
 
 if (typeof document !== "undefined") initializeBsales();

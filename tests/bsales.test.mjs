@@ -208,6 +208,48 @@ test("generated Bracco Sales pages are deterministic, accessible, and interactiv
   }
 });
 
+test("generated Bracco Sales prompt packs use the registered workbook and field identities", async () => {
+  const { packOneContent } = await import("../bsales/pack-1/content.js");
+  const { packTwoContent } = await import("../bsales/pack-2/content.js");
+  const { createBsalesSchemas } = await import("../lib/workbook-schema.js");
+  const packOne = await readFile(new URL("../bsales/prompt-pack-1/index.html", import.meta.url), "utf8");
+  const packTwo = await readFile(new URL("../bsales/prompt-pack-2/index.html", import.meta.url), "utf8");
+
+  const cases = [
+    {
+      html: packOne,
+      content: packOneContent,
+      workbookId: "bracco-sales-ai-brain",
+      endpoint: "/bsales/prompt-pack-1/api/responses",
+    },
+    {
+      html: packTwo,
+      content: packTwoContent,
+      workbookId: "bracco-sales-chief-of-staff",
+      endpoint: "/bsales/prompt-pack-2/api/responses",
+    },
+  ];
+
+  for (const { html, content, workbookId, endpoint } of cases) {
+    const schema = createBsalesSchemas(content);
+    assert.match(html, new RegExp(`data-workbook-id="${workbookId}"`, "u"));
+    assert.match(html, new RegExp(`data-response-endpoint="${endpoint}"`, "u"));
+    assert.deepEqual(
+      [...html.matchAll(/data-prompt-card data-prompt-id="([^"]+)"/gu)].map(([, id]) => id),
+      schema.map(({ id }) => id),
+    );
+    assert.deepEqual(
+      [...html.matchAll(/data-prompt-field="([^"]+)"/gu)].map(([, id]) => id),
+      schema.flatMap(({ fields }) => fields.map(({ id }) => id)),
+    );
+    assert.doesNotMatch(html, /data-prompt-field(?:\s|>)/u);
+  }
+
+  const promptOne = packOne.match(/<article[^>]+data-prompt-id="prompt-01"[\s\S]*?<\/article>/u)?.[0] ?? "";
+  assert.notEqual(promptOne, "");
+  assert.doesNotMatch(promptOne, /data-prompt-field/u);
+});
+
 test("Bracco Sales prompt personalization replaces only completed fields", async () => {
   assert.equal(existsSync(new URL("../assets/js/bsales.js", import.meta.url)), true);
   const { personalizePrompt } = await import("../assets/js/bsales.js");

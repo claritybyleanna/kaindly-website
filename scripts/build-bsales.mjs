@@ -3,6 +3,13 @@ import { fileURLToPath } from "node:url";
 import { bsalesContent } from "../bsales/content.js";
 import { packOneContent } from "../bsales/pack-1/content.js";
 import { packTwoContent } from "../bsales/pack-2/content.js";
+import { getWorkbookRegistration } from "../lib/workbook-registry.js";
+import { createBsalesSchemas } from "../lib/workbook-schema.js";
+
+const packRegistrations = new Map([
+  [packOneContent, getWorkbookRegistration("bracco-sales-pack-1")],
+  [packTwoContent, getWorkbookRegistration("bracco-sales-pack-2")],
+]);
 
 export function escapeHtml(value = "") {
   return String(value).replace(/[&<>'"]/gu, (character) => ({
@@ -105,34 +112,40 @@ function extractFields(prompt) {
   return [...new Set(tokens)].filter((token) => token !== "[Inferred]" && !/^\[OR:/u.test(token));
 }
 
-function renderFields(item, id) {
-  const fields = extractFields(item.prompt);
-  if (!fields.length) return "";
-  return `<section class="blead-prompt-personalize" aria-labelledby="${id}-personalize"><h4 id="${id}-personalize">Personalize this prompt</h4><p>Fill in the fields you want to replace. Blank fields keep the original bracketed guidance.</p><div class="blead-prompt-fields">${fields.map((token, index) => {
+function renderFields(item, exercise) {
+  const tokens = extractFields(item.prompt);
+  if (!exercise.fields.length) return "";
+  return `<section class="blead-prompt-personalize" aria-labelledby="${exercise.id}-personalize"><h4 id="${exercise.id}-personalize">Personalize this prompt</h4><p>Fill in the fields you want to replace. Blank fields keep the original bracketed guidance.</p><div class="blead-prompt-fields">${exercise.fields.map((field, index) => {
+    const token = tokens[index];
     const label = fieldLabel(token);
-    const fieldId = `${id}-field-${index + 1}`;
+    const fieldId = `${exercise.id}-${field.id}`;
     const multiline = /PASTE|NOTES|RESULTS|MANUAL|STATEMENTS|OBSERVATION|ACTION/i.test(label) || label.length > 54;
-    const shared = `id="${fieldId}" data-prompt-field data-prompt-token="${escapeHtml(token)}" placeholder="${escapeHtml(label)}" autocomplete="off"`;
+    const shared = `id="${fieldId}" data-prompt-field="${escapeHtml(field.id)}" data-prompt-token="${escapeHtml(token)}" placeholder="${escapeHtml(label)}" autocomplete="off"`;
     return `<label class="blead-prompt-field" for="${fieldId}"><span>${escapeHtml(label)}</span>${multiline ? `<textarea ${shared} rows="4"></textarea>` : `<input ${shared} type="text">`}</label>`;
   }).join("")}</div></section>`;
 }
 
-function promptCard(item, kind = "prompt") {
+function promptCard(item, exercise, kind = "prompt") {
   const number = String(item.number).padStart(2, "0");
-  const id = `${kind}-${number}`;
-  return `<article class="blead-prompt-card" id="${id}" data-prompt-card>
+  const id = exercise.id;
+  return `<article class="blead-prompt-card" id="${id}" data-prompt-card data-prompt-id="${escapeHtml(id)}">
     <header class="blead-prompt-card-header"><div><span class="blead-prompt-number">${kind === "setup" ? "Setup" : "Prompt"} ${number}</span><h3>${escapeHtml(item.title)}</h3></div><div class="blead-prompt-meta"><p><strong>Use it:</strong> ${escapeHtml(item.useWhen)}</p><p><strong>${kind === "setup" ? "Setup time" : "Stage"}:</strong> ${escapeHtml(item.time)}</p></div></header>
     ${item.description ? `<p class="bsales-card-description">${escapeHtml(item.description)}</p>` : ""}
     <details class="blead-prompt-exercise"${item.number === 1 ? " open" : ""}><summary><span>Open ${kind === "setup" ? "setup" : "prompt"}</span><span aria-hidden="true">+</span></summary><div class="blead-prompt-exercise-body">
-      ${renderFields(item, id)}
+      ${renderFields(item, exercise)}
       <section class="blead-prompt-copy" aria-labelledby="${id}-copy-title"><div class="blead-prompt-copy-heading"><h4 id="${id}-copy-title">Copy this ${kind === "setup" ? "setup" : "prompt"}</h4><button type="button" data-copy-prompt>Copy ${kind === "setup" ? "Setup" : "Prompt"}</button></div><textarea hidden data-prompt-template aria-hidden="true" tabindex="-1">${escapeHtml(item.prompt)}</textarea><pre tabindex="0" data-prompt-preview>${escapeHtml(item.prompt)}</pre><p class="blead-prompt-status" role="status" aria-live="polite" data-copy-status></p></section>
     </div></details>
   </article>`;
 }
 
 export function renderBsalesPack(content) {
+  const registration = packRegistrations.get(content);
+  if (!registration) throw new TypeError("Unknown Bracco Sales prompt pack");
+  const schemas = createBsalesSchemas(content);
+  const setupSchemas = schemas.slice(0, content.setup.length);
+  const promptSchemas = schemas.slice(content.setup.length);
   const setup = content.setup.length
-    ? `<section class="blead-section" id="setup" aria-labelledby="setup-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Set up your chief of staff</p><h2 id="setup-title">Four setup items</h2></div><p>Choose the notebook or agent route, then copy only the setup items for that route.</p></div><div class="blead-prompt-list">${content.setup.map((item) => promptCard(item, "setup")).join("")}</div></div></section>`
+    ? `<section class="blead-section" id="setup" aria-labelledby="setup-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Set up your chief of staff</p><h2 id="setup-title">Four setup items</h2></div><p>Choose the notebook or agent route, then copy only the setup items for that route.</p></div><div class="blead-prompt-list">${content.setup.map((item, index) => promptCard(item, setupSchemas[index], "setup")).join("")}</div></div></section>`
     : "";
   return `<!doctype html>
 <html lang="en">
@@ -148,14 +161,14 @@ export function renderBsalesPack(content) {
   <link rel="stylesheet" href="/assets/css/blead-prompts.css">
   <link rel="stylesheet" href="/assets/css/bsales.css">
 </head>
-<body class="blead-page blead-prompts-page bsales-page" id="top">
+<body class="blead-page blead-prompts-page bsales-page" id="top" data-workbook-id="${escapeHtml(registration.workbook.id)}" data-response-endpoint="${escapeHtml(registration.participantApiPath)}">
   <a class="skip-link" href="#main-content">Skip to content</a>
   ${header("pack")}
   <main id="main-content">
     <section class="blead-prompts-hero bsales-pack-hero" aria-labelledby="prompt-pack-title"><div class="blead-shell"><p class="blead-eyebrow">${escapeHtml(content.eyebrow)}</p><p class="bsales-pack-number">${escapeHtml(content.subtitle)}</p><h1 id="prompt-pack-title">${escapeHtml(content.title)}</h1><p class="blead-prompts-subtitle">${escapeHtml(content.introduction)}</p><p>${escapeHtml(content.guidance)}</p><div class="bsales-hero-actions"><a class="blead-button blead-button--primary" href="#${content.setup.length ? "setup" : "prompts"}">Start the pack</a><a class="blead-button blead-button--secondary" href="${escapeHtml(content.download)}" download>Download Word version</a></div></div></section>
     <section class="blead-section blead-section--tinted" id="safety" aria-labelledby="safety-title"><div class="blead-shell"><p class="blead-kicker">Before you start</p><h2 id="safety-title">Use it safely</h2><ul class="bsales-safety-list">${content.safety.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul></div></section>
     ${setup}
-    <section class="blead-section${content.setup.length ? " blead-section--tinted" : ""}" id="prompts" aria-labelledby="prompts-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Interactive workbook</p><h2 id="prompts-title">${content.prompts.length} prompts for the session</h2></div><p>Open a prompt, personalize any bracketed fields, then copy it into Microsoft Copilot.</p></div><div class="blead-prompt-list">${content.prompts.map((item) => promptCard(item)).join("")}</div></div></section>
+    <section class="blead-section${content.setup.length ? " blead-section--tinted" : ""}" id="prompts" aria-labelledby="prompts-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Interactive workbook</p><h2 id="prompts-title">${content.prompts.length} prompts for the session</h2></div><p>Open a prompt, personalize any bracketed fields, then copy it into Microsoft Copilot.</p></div><div class="blead-prompt-list">${content.prompts.map((item, index) => promptCard(item, promptSchemas[index])).join("")}</div></div></section>
   </main>
   ${footer()}
   <script type="module" src="/assets/js/bsales.js?v=20261015"></script>
