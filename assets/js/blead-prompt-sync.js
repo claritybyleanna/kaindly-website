@@ -4,7 +4,7 @@ import {
   initializeWorkbookSync,
 } from "./workbook-sync.js";
 
-const BLEAD_WORKBOOK_ID = "bracco-leadership-session-1";
+const BLEAD_WORKBOOK_ID = "bracco-session-1";
 const BLEAD_ENDPOINT = "/Blead/api/responses";
 const LEGACY_PARTICIPANT_STORAGE_KEY = "kaindly:blead:anonymous-participant-id";
 const PARTICIPANT_STORAGE_KEY = `kaindly:workbook:${BLEAD_WORKBOOK_ID}:participant-id`;
@@ -73,6 +73,8 @@ export function initializePromptSync({
   delay = 750,
   timers = globalThis,
   windowRoot = globalThis.window,
+  navigatorRoot = globalThis.navigator,
+  BlobConstructor = globalThis.Blob,
 } = {}) {
   if (!documentRoot) {
     return { ready: Promise.resolve(), whenIdle: () => Promise.resolve() };
@@ -96,6 +98,8 @@ export function initializePromptSync({
     fetchImpl,
     documentRoot,
     windowRoot,
+    navigatorRoot,
+    BlobConstructor,
     delay,
     timers,
     onStatus: setStatus,

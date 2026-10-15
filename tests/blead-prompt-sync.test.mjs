@@ -60,9 +60,21 @@ test("reuses one random anonymous ID through the Blead compatibility wrapper", (
     getOrCreateParticipantId(storage, cryptoApi),
   );
   assert.equal(
-    values.get("kaindly:workbook:bracco-leadership-session-1:participant-id"),
+    values.get("kaindly:workbook:bracco-session-1:participant-id"),
     participantId,
   );
+  assert.equal(values.has("kaindly:workbook:bracco-leadership-session-1:participant-id"), false);
+});
+
+test("migrates the legacy Blead participant ID into the persisted workbook ID key", () => {
+  const values = new Map([["kaindly:blead:anonymous-participant-id", participantId]]);
+  const storage = mapStorage(values);
+
+  assert.equal(
+    getOrCreateParticipantId(storage, { randomUUID: () => { throw new Error("should not run"); } }),
+    participantId,
+  );
+  assert.equal(values.get("kaindly:workbook:bracco-session-1:participant-id"), participantId);
 });
 
 test("queues the newest snapshot while one save is in flight", async () => {
@@ -168,6 +180,7 @@ test("blur and hidden-page lifecycle events flush the latest snapshot", async ()
     cryptoApi: { randomUUID: () => participantId },
     fetchImpl,
     delay: 60_000,
+    navigatorRoot: { sendBeacon: () => true },
   });
   await sync.ready;
 

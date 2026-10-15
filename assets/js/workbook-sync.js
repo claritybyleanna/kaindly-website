@@ -148,6 +148,15 @@ function defaultFieldId(field) {
   return field.dataset.promptField;
 }
 
+function createSerializedSave(save) {
+  let tail = Promise.resolve();
+  return function enqueue(snapshot) {
+    const operation = tail.then(() => save(snapshot));
+    tail = operation.catch(() => {});
+    return operation;
+  };
+}
+
 export function initializeWorkbookSync({
   workbookId,
   endpoint,
@@ -159,6 +168,8 @@ export function initializeWorkbookSync({
   fetchImpl = globalThis.fetch,
   documentRoot = globalThis.document,
   windowRoot = globalThis.window,
+  navigatorRoot = globalThis.navigator,
+  BlobConstructor = globalThis.Blob,
   delay = 750,
   timers = globalThis,
   onStatus = () => {},
@@ -172,6 +183,7 @@ export function initializeWorkbookSync({
   const participantId = getOrCreateParticipantId(storage, workbookId, cryptoApi);
   const controllers = new Map();
   const localValues = new Map();
+  const lifecycleSignatures = new Map();
 
   function persistControl(card, control, kind) {
     const exerciseId = getExerciseId(card);
@@ -220,10 +232,36 @@ export function initializeWorkbookSync({
     return response;
   }
 
+  const serializedSave = createSerializedSave(save);
+
+  function attemptUnloadSave(snapshot) {
+    const body = JSON.stringify(snapshot);
+    try {
+      if (typeof navigatorRoot?.sendBeacon === "function" && BlobConstructor) {
+        const payload = new BlobConstructor([body], { type: "application/json" });
+        if (navigatorRoot.sendBeacon(endpoint, payload) === true) return;
+      }
+    } catch {
+      // Beacon can reject a payload synchronously; keepalive fetch is the fallback.
+    }
+
+    try {
+      Promise.resolve(fetchImpl(endpoint, {
+        method: "POST",
+        credentials: "same-origin",
+        keepalive: true,
+        headers: { "Content-Type": "application/json" },
+        body,
+      })).catch(() => {});
+    } catch {
+      // Unload delivery is best effort; the local snapshot and normal retry remain authoritative.
+    }
+  }
+
   for (const card of workbookCards) {
     hydrateLocal(card);
     const exerciseId = getExerciseId(card);
-    const controller = createAutosaveController({ save, delay, timers, onStatus });
+    const controller = createAutosaveController({ save: serializedSave, delay, timers, onStatus });
     controllers.set(exerciseId, controller);
     const notes = getNotes(card);
     const controls = [...getFields(card), notes].filter(Boolean);
@@ -232,6 +270,7 @@ export function initializeWorkbookSync({
       control.addEventListener("input", () => {
         persistControl(card, control, kind);
         localValues.set(exerciseId, true);
+        lifecycleSignatures.delete(exerciseId);
         controller.schedule(collectSnapshot(card, participantId));
       });
       control.addEventListener("blur", () => {
@@ -243,18 +282,24 @@ export function initializeWorkbookSync({
     }
   }
 
-  function flushAll() {
+  function flushLifecycle() {
     for (const card of workbookCards) {
-      if (!localValues.get(getExerciseId(card))) continue;
+      const exerciseId = getExerciseId(card);
+      if (!localValues.get(exerciseId)) continue;
       persistCard(card);
-      void controllers.get(getExerciseId(card))?.flush(collectSnapshot(card, participantId));
+      const snapshot = collectSnapshot(card, participantId);
+      void controllers.get(exerciseId)?.flush(snapshot);
+      const signature = JSON.stringify(snapshot);
+      if (lifecycleSignatures.get(exerciseId) === signature) continue;
+      lifecycleSignatures.set(exerciseId, signature);
+      attemptUnloadSave(snapshot);
     }
   }
 
   documentRoot?.addEventListener?.("visibilitychange", () => {
-    if (documentRoot.visibilityState === "hidden") flushAll();
+    if (documentRoot.visibilityState === "hidden") flushLifecycle();
   });
-  windowRoot?.addEventListener?.("pagehide", flushAll);
+  windowRoot?.addEventListener?.("pagehide", flushLifecycle);
 
   const ready = (async () => {
     try {

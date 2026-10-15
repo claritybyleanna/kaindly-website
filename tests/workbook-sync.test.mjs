@@ -251,6 +251,7 @@ test("input persists exact workbook keys and failed sync retries on a hidden-pag
     fetchImpl,
     documentRoot,
     windowRoot,
+    navigatorRoot: { sendBeacon: () => true },
     delay: 60_000,
   });
   await sync.ready;
@@ -315,4 +316,162 @@ test("lifecycle flushes never create responses for untouched empty exercises", a
   await sync.whenIdle();
 
   assert.equal(posts, 0);
+});
+
+test("normal saves from different exercises share one serialized workbook transport", async () => {
+  const first = workbookCard({ exerciseId: "prompt-01" });
+  const second = workbookCard({ exerciseId: "prompt-02" });
+  const sent = [];
+  const releases = [];
+  let inFlight = 0;
+  let peakInFlight = 0;
+  const sync = initializeWorkbookSync({
+    workbookId: "serialized-workbook",
+    endpoint: "/serialized/api/responses",
+    cards: [first, second],
+    collectSnapshot,
+    hydrateSnapshot,
+    storage: memoryStorage(),
+    cryptoApi: fakeCrypto([uuidA]),
+    fetchImpl: async (_url, options = {}) => {
+      if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+      const snapshot = JSON.parse(options.body);
+      sent.push([snapshot.exerciseId, snapshot.fields.title]);
+      inFlight += 1;
+      peakInFlight = Math.max(peakInFlight, inFlight);
+      await new Promise((resolve) => releases.push(resolve));
+      inFlight -= 1;
+      return { ok: true, json: async () => ({}) };
+    },
+    documentRoot: eventTarget({ visibilityState: "visible" }),
+    windowRoot: eventTarget(),
+    delay: 0,
+  });
+  await sync.ready;
+
+  first.fields[0].value = "First exercise";
+  first.fields[0].emit("input");
+  second.fields[0].value = "Second draft";
+  second.fields[0].emit("input");
+  second.fields[0].value = "Second newest";
+  second.fields[0].emit("input");
+  await tick();
+
+  assert.deepEqual(sent, [["prompt-01", "First exercise"]]);
+  assert.equal(peakInFlight, 1);
+
+  releases.shift()();
+  await tick();
+  assert.deepEqual(sent, [
+    ["prompt-01", "First exercise"],
+    ["prompt-02", "Second newest"],
+  ]);
+  assert.equal(peakInFlight, 1);
+  releases.shift()();
+  await sync.whenIdle();
+});
+
+test("hidden then pagehide makes one immediate beacon attempt with the latest local snapshot", async () => {
+  const card = workbookCard();
+  const storage = memoryStorage();
+  const documentRoot = eventTarget({ visibilityState: "visible" });
+  const windowRoot = eventTarget();
+  const normalReleases = [];
+  const beacons = [];
+  const sync = initializeWorkbookSync({
+    workbookId: "unload-workbook",
+    endpoint: "/unload/api/responses",
+    cards: [card],
+    collectSnapshot,
+    hydrateSnapshot,
+    storage,
+    cryptoApi: fakeCrypto([uuidA]),
+    fetchImpl: async (_url, options = {}) => {
+      if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+      await new Promise((resolve) => normalReleases.push(resolve));
+      return { ok: true, json: async () => ({}) };
+    },
+    navigatorRoot: {
+      sendBeacon(url, body) {
+        beacons.push({ url, body });
+        return true;
+      },
+    },
+    documentRoot,
+    windowRoot,
+    delay: 60_000,
+  });
+  await sync.ready;
+
+  card.fields[0].value = "First";
+  card.fields[0].emit("input");
+  card.fields[0].emit("blur");
+  await tick();
+  assert.equal(normalReleases.length, 1);
+
+  card.fields[0].value = "Newest before unload";
+  card.fields[0].emit("input");
+  documentRoot.visibilityState = "hidden";
+  documentRoot.emit("visibilitychange");
+  windowRoot.emit("pagehide");
+
+  assert.equal(beacons.length, 1);
+  assert.equal(beacons[0].url, "/unload/api/responses");
+  assert.equal(beacons[0].body.type, "application/json");
+  assert.equal(JSON.parse(await beacons[0].body.text()).fields.title, "Newest before unload");
+  assert.equal(
+    storage.values.get("kaindly:workbook:unload-workbook:exercise:prompt-01:field:title"),
+    "Newest before unload",
+  );
+
+  normalReleases.shift()();
+  await tick();
+  normalReleases.shift()();
+  await sync.whenIdle();
+});
+
+test("pagehide falls back to an immediate keepalive fetch when beacon declines", async () => {
+  const card = workbookCard();
+  const windowRoot = eventTarget();
+  const normalReleases = [];
+  const posts = [];
+  const sync = initializeWorkbookSync({
+    workbookId: "fallback-workbook",
+    endpoint: "/fallback/api/responses",
+    cards: [card],
+    collectSnapshot,
+    hydrateSnapshot,
+    storage: memoryStorage(),
+    cryptoApi: fakeCrypto([uuidA]),
+    fetchImpl: async (_url, options = {}) => {
+      if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+      posts.push(JSON.parse(options.body));
+      if (posts.length === 1) {
+        await new Promise((resolve) => normalReleases.push(resolve));
+      }
+      return { ok: true, json: async () => ({}) };
+    },
+    navigatorRoot: { sendBeacon: () => false },
+    documentRoot: eventTarget({ visibilityState: "visible" }),
+    windowRoot,
+    delay: 60_000,
+  });
+  await sync.ready;
+
+  card.fields[0].value = "Normal in flight";
+  card.fields[0].emit("input");
+  card.fields[0].emit("blur");
+  await tick();
+
+  card.fields[0].value = "Immediate fallback";
+  card.fields[0].emit("input");
+  windowRoot.emit("pagehide");
+  await tick();
+
+  assert.equal(posts.length, 2);
+  assert.equal(posts[1].fields.title, "Immediate fallback");
+
+  normalReleases.shift()();
+  await tick();
+  await sync.whenIdle();
 });
