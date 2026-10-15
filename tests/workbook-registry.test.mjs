@@ -50,6 +50,9 @@ test("registers every current workbook with explicit identity and retention", ()
 test("looks up registrations by server-owned workbook key", () => {
   assert.equal(getWorkbookRegistration("bracco-sales-pack-1").workbook.id, "bracco-sales-ai-brain");
   assert.equal(getWorkbookRegistration("unknown"), undefined);
+  for (const inheritedKey of ["__proto__", "constructor", "toString"]) {
+    assert.equal(getWorkbookRegistration(inheritedKey), undefined, `${inheritedKey} is not a registered workbook key`);
+  }
 });
 
 test("rejects duplicate global workbook IDs and missing or expired deadlines", () => {
