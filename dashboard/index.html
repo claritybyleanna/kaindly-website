@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Facilitator Dashboard | KAINDLY</title>
+  <meta name="description" content="Private review of anonymous KAINDLY client workbook responses.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="/assets/brand/icon-violet.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/assets/css/site.css">
+  <link rel="stylesheet" href="/assets/css/dashboard.css">
+</head>
+<body class="dashboard-page" id="top">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="dashboard-header">
+    <div class="dashboard-shell dashboard-header__inner">
+      <a class="dashboard-brand" href="/dashboard/" aria-label="KAINDLY facilitator dashboard"><img src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY" width="166" height="32"></a>
+      <button class="dashboard-sign-out" type="button" data-dashboard-sign-out>Sign out</button>
+    </div>
+  </header>
+  <main id="main-content">
+    <section class="dashboard-hero">
+      <div class="dashboard-shell">
+        <p class="dashboard-eyebrow">KAINDLY · FACILITATOR WORKSPACE</p>
+        <h1>Client response dashboard</h1>
+        <p>Review anonymous workbook responses across KAINDLY client programs.</p>
+      </div>
+    </section>
+    <section class="dashboard-section dashboard-overview" aria-labelledby="overview-title">
+      <div class="dashboard-shell">
+        <div class="dashboard-section-heading"><div><p class="dashboard-kicker">At a glance</p><h2 id="overview-title">Program activity</h2></div></div>
+        <div class="dashboard-summary" aria-live="polite">
+          <article><strong data-summary-clients>—</strong><span>Clients</span></article>
+          <article><strong data-summary-workbooks>—</strong><span>Workbooks</span></article>
+          <article><strong data-summary-participants>—</strong><span>Participants</span></article>
+          <article><strong data-summary-responses>—</strong><span>Responses</span></article>
+        </div>
+        <div class="dashboard-directory" data-dashboard-directory></div>
+      </div>
+    </section>
+    <section class="dashboard-section dashboard-response-review" aria-labelledby="responses-title">
+      <div class="dashboard-shell">
+        <div class="dashboard-section-heading dashboard-section-heading--actions">
+          <div><p class="dashboard-kicker">Response review</p><h2 id="responses-title">Anonymous workbook responses</h2></div>
+          <a class="dashboard-button dashboard-button--primary" href="/dashboard/api/export.csv" data-dashboard-export>Export filtered CSV</a>
+        </div>
+        <form class="dashboard-filters" data-dashboard-filters>
+          <label class="dashboard-filter"><span>Clients</span><select name="client" data-dashboard-filter="client"><option value="">All clients</option></select></label>
+          <label class="dashboard-filter"><span>Programs</span><select name="program" data-dashboard-filter="program"><option value="">All programs</option></select></label>
+          <label class="dashboard-filter"><span>Workbooks</span><select name="workbook" data-dashboard-filter="workbook"><option value="">All workbooks</option></select></label>
+          <label class="dashboard-filter"><span>Exercises</span><select name="exercise" data-dashboard-filter="exercise"><option value="">All exercises</option></select></label>
+          <label class="dashboard-filter"><span>Participants</span><select name="participant" data-dashboard-filter="participant"><option value="">All participants</option></select></label>
+          <label class="dashboard-filter"><span>From date</span><input type="date" name="from" data-dashboard-filter="from"></label>
+          <label class="dashboard-filter"><span>To date</span><input type="date" name="to" data-dashboard-filter="to"></label>
+          <label class="dashboard-filter dashboard-filter--search"><span>Response text</span><input type="search" name="search" placeholder="Search saved responses" autocomplete="off" data-dashboard-filter="search"></label>
+          <div class="dashboard-filter-actions"><button class="dashboard-button dashboard-button--secondary" type="submit">Apply filters</button><button class="dashboard-clear" type="button" data-dashboard-clear>Clear filters</button></div>
+        </form>
+        <p class="dashboard-state" data-dashboard-loading>Loading responses…</p>
+        <p class="dashboard-state" data-dashboard-empty hidden>No responses match these filters.</p>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Email yourself a new sign-in link</a> to continue.</p></div>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unavailable hidden><h3>The dashboard is temporarily unavailable.</h3><p>Please try again shortly.</p><button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-retry>Try again</button></div>
+        <div class="dashboard-responses" data-dashboard-responses aria-live="polite"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="dashboard-footer"><div class="dashboard-shell"><a class="dashboard-brand" href="/" aria-label="KAINDLY facilitator dashboard"><img src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY" width="166" height="32"></a><a href="#top">Back to top ↑</a></div></footer>
+  <script type="module" src="/assets/js/dashboard-auth.js"></script>
+  <script type="module" src="/assets/js/dashboard.js"></script>
+</body>
+</html>
