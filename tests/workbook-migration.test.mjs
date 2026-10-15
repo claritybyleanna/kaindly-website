@@ -7,6 +7,29 @@ const migrationUrl = new URL(
   import.meta.url,
 );
 
+test("migration initializes a fresh database with the legacy response contract", async () => {
+  const sql = await readFile(migrationUrl, "utf8");
+  const createPosition = sql.indexOf("CREATE TABLE IF NOT EXISTS blead_workbook_responses");
+  const alterPosition = sql.indexOf("ALTER TABLE blead_workbook_responses");
+
+  assert.ok(createPosition > sql.indexOf("pg_advisory_xact_lock"));
+  assert.ok(alterPosition > createPosition);
+  assert.match(sql, /participant_id uuid NOT NULL/u);
+  assert.match(sql, /workbook_id text NOT NULL/u);
+  assert.match(sql, /exercise_id text NOT NULL/u);
+  assert.match(
+    sql,
+    /payload jsonb NOT NULL CHECK \(jsonb_typeof\(payload\) = 'object'\)/u,
+  );
+  assert.match(sql, /created_at timestamptz NOT NULL DEFAULT now\(\)/u);
+  assert.match(sql, /updated_at timestamptz NOT NULL DEFAULT now\(\)/u);
+  assert.match(sql, /delete_after timestamptz NOT NULL/u);
+  assert.match(
+    sql,
+    /PRIMARY KEY \(participant_id, workbook_id, exercise_id\)/u,
+  );
+});
+
 test("migration backfills only legacy Blead rows before adding non-null constraints", async () => {
   const sql = await readFile(migrationUrl, "utf8");
 
@@ -24,10 +47,15 @@ test("migration backfills only legacy Blead rows before adding non-null constrai
   );
 
   const backfillPosition = sql.indexOf("SET client_id = 'bracco'");
+  const programBackfillPosition = sql.indexOf(
+    "SET program_id = 'leadership-accelerator'",
+  );
   const nullGuardPosition = sql.indexOf("RAISE EXCEPTION");
   const notNullPosition = sql.indexOf("SET NOT NULL");
   assert.ok(backfillPosition >= 0);
+  assert.ok(programBackfillPosition >= 0);
   assert.ok(nullGuardPosition > backfillPosition);
+  assert.ok(nullGuardPosition > programBackfillPosition);
   assert.ok(notNullPosition > nullGuardPosition);
 
   assert.match(

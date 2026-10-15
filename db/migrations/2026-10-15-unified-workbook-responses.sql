@@ -4,6 +4,19 @@ SELECT pg_advisory_xact_lock(
   hashtextextended('kaindly:2026-10-15-unified-workbook-responses', 0)
 );
 
+CREATE TABLE IF NOT EXISTS blead_workbook_responses (
+  client_id text,
+  program_id text,
+  participant_id uuid NOT NULL,
+  workbook_id text NOT NULL,
+  exercise_id text NOT NULL,
+  payload jsonb NOT NULL CHECK (jsonb_typeof(payload) = 'object'),
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  delete_after timestamptz NOT NULL,
+  PRIMARY KEY (participant_id, workbook_id, exercise_id)
+);
+
 ALTER TABLE blead_workbook_responses
   ADD COLUMN IF NOT EXISTS client_id text,
   ADD COLUMN IF NOT EXISTS program_id text;
