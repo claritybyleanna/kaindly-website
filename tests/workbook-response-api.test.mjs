@@ -25,6 +25,48 @@ function createStore(overrides = {}) {
   };
 }
 
+function toBase64Url(bytes) {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/u, "");
+}
+
+async function signRawMclendonToken(secret, expiresAt) {
+  const payload = `v2.mclendon-participant.${expiresAt}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload));
+  return `${payload}.${toBase64Url(new Uint8Array(signature))}`;
+}
+
+async function withMclendonAdapterEnvironment(values, callback) {
+  const keys = [
+    "MCLENDON_SESSION_SECRET",
+    "BLEAD_SESSION_SECRET",
+    "BLEAD_FACILITATOR_SESSION_SECRET",
+    "BSALES_SESSION_SECRET",
+    "DATABASE_URL",
+  ];
+  const previous = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
+  for (const key of keys) {
+    if (values[key] === undefined) delete process.env[key];
+    else process.env[key] = values[key];
+  }
+  try {
+    return await callback();
+  } finally {
+    for (const key of keys) {
+      if (previous[key] === undefined) delete process.env[key];
+      else process.env[key] = previous[key];
+    }
+  }
+}
+
 test("route-owned registration ignores tampered client, program, and workbook identities", async () => {
   const { createParticipantResponseHandlers } = await import("../lib/workbook-response-api.js");
   const registration = getWorkbookRegistration("bracco-sales-pack-1");
@@ -324,6 +366,63 @@ test("fixed physical adapters reject absent and wrong-client sessions before dat
       else process.env[key] = value;
     }
   }
+});
+
+test("the direct McLendon function rejects a correctly signed token when its secret is weak", async () => {
+  const weakSecret = "weak-secret";
+  const token = await signRawMclendonToken(weakSecret, Date.now() + 60_000);
+  await withMclendonAdapterEnvironment({
+    MCLENDON_SESSION_SECRET: weakSecret,
+    BLEAD_SESSION_SECRET: "distinct-blead-secret-with-adequate-length",
+    BLEAD_FACILITATOR_SESSION_SECRET: "distinct-facilitator-secret-with-adequate-length",
+    BSALES_SESSION_SECRET: "distinct-sales-secret-with-adequate-length",
+  }, async () => {
+    const { MCLENDON_COOKIE_NAME } = await import("../lib/mclendon-auth.js");
+    const { GET } = await import("../api/workbook-responses-mclendon.js");
+    const response = await GET(new Request(
+      "https://www.kaindly.ai/api/workbook-responses-mclendon?participantId=not-a-uuid",
+      { headers: { cookie: `${MCLENDON_COOKIE_NAME}=${token}` } },
+    ));
+    assert.equal(response.status, 401);
+  });
+});
+
+test("the direct McLendon function rejects a signing secret reused from another hub", async () => {
+  const reusedSecret = "shared-sales-and-mclendon-secret-with-adequate-length";
+  const { signMclendonSession, MCLENDON_COOKIE_NAME } = await import("../lib/mclendon-auth.js");
+  const token = await signMclendonSession({ expiresAt: Date.now() + 60_000, secret: reusedSecret });
+  await withMclendonAdapterEnvironment({
+    MCLENDON_SESSION_SECRET: reusedSecret,
+    BLEAD_SESSION_SECRET: "distinct-blead-secret-with-adequate-length",
+    BLEAD_FACILITATOR_SESSION_SECRET: "distinct-facilitator-secret-with-adequate-length",
+    BSALES_SESSION_SECRET: reusedSecret,
+  }, async () => {
+    const { GET } = await import("../api/workbook-responses-mclendon.js");
+    const response = await GET(new Request(
+      "https://www.kaindly.ai/api/workbook-responses-mclendon?participantId=not-a-uuid",
+      { headers: { cookie: `${MCLENDON_COOKIE_NAME}=${token}` } },
+    ));
+    assert.equal(response.status, 401);
+  });
+});
+
+test("the direct McLendon function accepts a valid token signed by its distinct secret", async () => {
+  const secret = "distinct-mclendon-adapter-secret-with-adequate-length";
+  const { signMclendonSession, MCLENDON_COOKIE_NAME } = await import("../lib/mclendon-auth.js");
+  const token = await signMclendonSession({ expiresAt: Date.now() + 60_000, secret });
+  await withMclendonAdapterEnvironment({
+    MCLENDON_SESSION_SECRET: secret,
+    BLEAD_SESSION_SECRET: "distinct-blead-secret-with-adequate-length",
+    BLEAD_FACILITATOR_SESSION_SECRET: "distinct-facilitator-secret-with-adequate-length",
+    BSALES_SESSION_SECRET: "distinct-sales-secret-with-adequate-length",
+  }, async () => {
+    const { GET } = await import("../api/workbook-responses-mclendon.js");
+    const response = await GET(new Request(
+      "https://www.kaindly.ai/api/workbook-responses-mclendon?participantId=not-a-uuid",
+      { headers: { cookie: `${MCLENDON_COOKIE_NAME}=${token}` } },
+    ));
+    assert.equal(response.status, 400);
+  });
 });
 
 test("Vercel rewrites bind each workbook URL to one physical adapter and preserve the Blead alias", async () => {
