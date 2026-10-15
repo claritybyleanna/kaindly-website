@@ -28,15 +28,6 @@ export function compilePrompt(template, replacements = {}) {
   }, String(template));
 }
 
-export function saveExerciseValue(storage, promptId, fieldId, value) {
-  try {
-    storage?.setItem(storageKey(promptId, fieldId), String(value ?? ""));
-    return true;
-  } catch {
-    return false;
-  }
-}
-
 export function loadExerciseValue(storage, promptId, fieldId) {
   const currentKey = storageKey(promptId, fieldId);
   const current = readStorage(storage, currentKey);
@@ -51,6 +42,10 @@ export function loadExerciseValue(storage, promptId, fieldId) {
     // The legacy value is still usable for this visit when storage is unavailable.
   }
   return legacy;
+}
+
+function isExerciseValueStored(storage, promptId, fieldId, value) {
+  return readStorage(storage, storageKey(promptId, fieldId)) === String(value ?? "");
 }
 
 export async function copyPrompt(clipboard, promptText) {
@@ -71,7 +66,7 @@ function legacyCopy(documentRoot, text) {
   if (!copied) throw new Error("Copy failed");
 }
 
-function initializePrompt(card, documentRoot, storage) {
+function preparePrompt(card, documentRoot, storage) {
   const promptId = card.dataset.promptId;
   const template = card.querySelector("[data-prompt-template]")?.value ?? "";
   const preview = card.querySelector("[data-prompt-preview]");
@@ -90,48 +85,57 @@ function initializePrompt(card, documentRoot, storage) {
 
   fields.forEach((field) => {
     field.value = loadExerciseValue(storage, promptId, field.dataset.promptField);
-    field.addEventListener("input", () => {
-      const saved = saveExerciseValue(storage, promptId, field.dataset.promptField, field.value);
-      refreshPreview();
-      if (noteStatus) noteStatus.textContent = saved ? "Exercise saved in this browser." : "Exercise updated for this visit.";
-    });
   });
 
   if (notes) {
     notes.value = loadExerciseValue(storage, promptId, "notes");
-    notes.addEventListener("input", () => {
-      const saved = saveExerciseValue(storage, promptId, "notes", notes.value);
-      if (noteStatus) noteStatus.textContent = saved ? "Notes saved in this browser." : "Notes updated for this visit.";
-    });
   }
 
-  card.addEventListener("blead:hydrate", () => {
-    fields.forEach((field) => {
-      saveExerciseValue(storage, promptId, field.dataset.promptField, field.value);
-    });
-    if (notes) saveExerciseValue(storage, promptId, "notes", notes.value);
-    refreshPreview();
-    if (noteStatus) noteStatus.textContent = "Exercise restored on this device.";
-  });
-
-  copyButton?.addEventListener("click", async () => {
-    const promptText = compilePrompt(template, replacements());
-    try {
-      if (globalThis.navigator?.clipboard?.writeText) {
-        await copyPrompt(globalThis.navigator.clipboard, promptText);
-      } else {
-        legacyCopy(documentRoot, promptText);
-      }
-      copyStatus.textContent = "Prompt copied. Paste it into Microsoft Copilot.";
-      copyButton.textContent = "Copied";
-      globalThis.setTimeout?.(() => { copyButton.textContent = "Copy Prompt"; }, 1800);
-    } catch {
-      copyStatus.textContent = "Copy was blocked. Select the prompt text and copy it manually.";
-      preview?.focus();
-    }
-  });
-
   refreshPreview();
+
+  return function attachPresentationListeners() {
+    fields.forEach((field) => {
+      field.addEventListener("input", () => {
+        const saved = isExerciseValueStored(
+          storage,
+          promptId,
+          field.dataset.promptField,
+          field.value,
+        );
+        refreshPreview();
+        if (noteStatus) noteStatus.textContent = saved ? "Exercise saved in this browser." : "Exercise updated for this visit.";
+      });
+    });
+
+    if (notes) {
+      notes.addEventListener("input", () => {
+        const saved = isExerciseValueStored(storage, promptId, "notes", notes.value);
+        if (noteStatus) noteStatus.textContent = saved ? "Notes saved in this browser." : "Notes updated for this visit.";
+      });
+    }
+
+    card.addEventListener("blead:hydrate", () => {
+      refreshPreview();
+      if (noteStatus) noteStatus.textContent = "Exercise restored on this device.";
+    });
+
+    copyButton?.addEventListener("click", async () => {
+      const promptText = compilePrompt(template, replacements());
+      try {
+        if (globalThis.navigator?.clipboard?.writeText) {
+          await copyPrompt(globalThis.navigator.clipboard, promptText);
+        } else {
+          legacyCopy(documentRoot, promptText);
+        }
+        copyStatus.textContent = "Prompt copied. Paste it into Microsoft Copilot.";
+        copyButton.textContent = "Copied";
+        globalThis.setTimeout?.(() => { copyButton.textContent = "Copy Prompt"; }, 1800);
+      } catch {
+        copyStatus.textContent = "Copy was blocked. Select the prompt text and copy it manually.";
+        preview?.focus();
+      }
+    });
+  };
 }
 
 export function initializePromptWorkbook(
@@ -140,10 +144,11 @@ export function initializePromptWorkbook(
   syncOptions = {},
 ) {
   if (!documentRoot) return;
-  documentRoot.querySelectorAll("[data-prompt-card]").forEach((card) => {
-    initializePrompt(card, documentRoot, storage);
-  });
-  return initializePromptSync({ ...syncOptions, documentRoot, storage });
+  const preparedPrompts = [...documentRoot.querySelectorAll("[data-prompt-card]")]
+    .map((card) => preparePrompt(card, documentRoot, storage));
+  const sync = initializePromptSync({ ...syncOptions, documentRoot, storage });
+  preparedPrompts.forEach((attachPresentationListeners) => attachPresentationListeners());
+  return sync;
 }
 
 if (typeof document !== "undefined") initializePromptWorkbook(document);

@@ -81,7 +81,6 @@ test("prompt exercises compile personalized copy and keep a workbook-scoped loca
     compilePrompt,
     copyPrompt,
     loadExerciseValue,
-    saveExerciseValue,
   } = await import("../assets/js/blead-prompts.js");
 
   const template = "I am [YOUR TITLE] leading [YOUR TEAM].";
@@ -102,7 +101,10 @@ test("prompt exercises compile personalized copy and keep a workbook-scoped loca
     getItem(key) { return saved.has(key) ? saved.get(key) : null; },
     setItem(key, value) { saved.set(key, value); },
   };
-  saveExerciseValue(storage, "prompt-01", "title", "VP, Commercial Analytics");
+  saved.set(
+    "kaindly:workbook:bracco-session-1:exercise:prompt-01:field:title",
+    "VP, Commercial Analytics",
+  );
   assert.equal(
     loadExerciseValue(storage, "prompt-01", "title"),
     "VP, Commercial Analytics",
@@ -129,6 +131,8 @@ test("legacy exercise values migrate only when their workbook-scoped destination
     ["kaindly:blead:session-1:prompt-01:team", "Legacy team"],
     ["kaindly:workbook:bracco-session-1:exercise:prompt-01:field:team", "Current team"],
     ["kaindly:blead:session-1:prompt-01:notes", "Legacy notes"],
+    ["kaindly:blead:session-1:prompt-02:notes", "Legacy conflicting notes"],
+    ["kaindly:workbook:bracco-session-1:exercise:prompt-02:notes", "Current notes"],
   ]);
   const storage = {
     getItem(key) { return values.has(key) ? values.get(key) : null; },
@@ -150,6 +154,132 @@ test("legacy exercise values migrate only when their workbook-scoped destination
     values.get("kaindly:workbook:bracco-session-1:exercise:prompt-01:notes"),
     "Legacy notes",
   );
+  assert.equal(loadExerciseValue(storage, "prompt-02", "notes"), "Current notes");
+  assert.equal(
+    values.get("kaindly:workbook:bracco-session-1:exercise:prompt-02:notes"),
+    "Current notes",
+  );
+});
+
+function eventControl(dataset = {}, value = "") {
+  const listeners = new Map();
+  return {
+    dataset,
+    value,
+    textContent: "",
+    addEventListener(type, listener) {
+      if (!listeners.has(type)) listeners.set(type, []);
+      listeners.get(type).push(listener);
+    },
+    emit(type) { listeners.get(type)?.forEach((listener) => listener({ target: this })); },
+    focus() {},
+  };
+}
+
+function interactivePromptCard() {
+  const field = eventControl({ promptField: "title", promptToken: "[YOUR TITLE]" });
+  const notes = eventControl();
+  const preview = eventControl();
+  const noteStatus = eventControl();
+  const copyButton = eventControl();
+  copyButton.textContent = "Copy Prompt";
+  const cardListeners = new Map();
+  const controls = {
+    "[data-prompt-template]": { value: "I am [YOUR TITLE]." },
+    "[data-prompt-preview]": preview,
+    "[data-copy-prompt]": copyButton,
+    "[data-copy-status]": eventControl(),
+    "[data-prompt-notes]": notes,
+    "[data-note-status]": noteStatus,
+  };
+  return {
+    dataset: { promptId: "prompt-01" },
+    field,
+    notes,
+    preview,
+    noteStatus,
+    querySelectorAll(selector) { return selector === "[data-prompt-field]" ? [field] : []; },
+    querySelector(selector) { return controls[selector] ?? null; },
+    addEventListener(type, listener) {
+      if (!cardListeners.has(type)) cardListeners.set(type, []);
+      cardListeners.get(type).push(listener);
+    },
+    dispatchEvent(event) { cardListeners.get(event.type)?.forEach((listener) => listener(event)); },
+  };
+}
+
+function promptDocument(card) {
+  return {
+    visibilityState: "visible",
+    querySelectorAll(selector) { return selector === "[data-prompt-card]" ? [card] : []; },
+    querySelector() { return null; },
+    addEventListener() {},
+  };
+}
+
+test("one input uses shared persistence once while Blead presentation still refreshes", async () => {
+  const { initializePromptWorkbook } = await import("../assets/js/blead-prompts.js");
+  const participantId = "75f6c553-4bb4-4b3e-9a2a-ef29f1b64930";
+  const values = new Map();
+  const writes = [];
+  const storage = {
+    getItem(key) { return values.has(key) ? values.get(key) : null; },
+    setItem(key, value) { writes.push([key, value]); values.set(key, value); },
+  };
+  const posts = [];
+  const card = interactivePromptCard();
+  const sync = initializePromptWorkbook(promptDocument(card), storage, {
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl: async (_url, options = {}) => {
+      if (!options.method) return { ok: true, json: async () => ({ responses: [] }) };
+      posts.push(JSON.parse(options.body));
+      return { ok: true, json: async () => ({}) };
+    },
+    windowRoot: { addEventListener() {} },
+    navigatorRoot: {},
+    delay: 0,
+  });
+  await sync.ready;
+  writes.length = 0;
+
+  card.field.value = "Commercial leader";
+  card.field.emit("input");
+  await sync.whenIdle();
+
+  assert.deepEqual(writes, [[
+    "kaindly:workbook:bracco-session-1:exercise:prompt-01:field:title",
+    "Commercial leader",
+  ]]);
+  assert.equal(posts.length, 1);
+  assert.equal(posts[0].fields.title, "Commercial leader");
+  assert.equal(card.preview.textContent, "I am Commercial leader.");
+  assert.equal(card.noteStatus.textContent, "Exercise saved in this browser.");
+});
+
+test("presentation status retains visit-only copy when shared local persistence fails", async () => {
+  const { initializePromptWorkbook } = await import("../assets/js/blead-prompts.js");
+  const participantId = "75f6c553-4bb4-4b3e-9a2a-ef29f1b64930";
+  const card = interactivePromptCard();
+  const storage = {
+    getItem() { return null; },
+    setItem() { throw new Error("storage unavailable"); },
+  };
+  const sync = initializePromptWorkbook(promptDocument(card), storage, {
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl: async (_url, options = {}) => options.method
+      ? { ok: true, json: async () => ({}) }
+      : { ok: true, json: async () => ({ responses: [] }) },
+    windowRoot: { addEventListener() {} },
+    navigatorRoot: {},
+    delay: 0,
+  });
+  await sync.ready;
+
+  card.notes.value = "Remember this";
+  card.notes.emit("input");
+  await sync.whenIdle();
+
+  assert.equal(card.noteStatus.textContent, "Notes updated for this visit.");
 });
 
 test("workbook startup uses the persisted Blead ID and protected response endpoint", async () => {
