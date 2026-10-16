@@ -226,6 +226,24 @@ test("production authorizer passes only validated environment origins to Clerk",
   }
 });
 
+test("resolves the Clerk publishable key from Vercel's managed integration variable", async () => {
+  const dashboardAuth = await import("../lib/dashboard-auth.js");
+  assert.equal(typeof dashboardAuth.resolveClerkPublishableKey, "function");
+  assert.equal(
+    dashboardAuth.resolveClerkPublishableKey({
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: LIVE_PUBLISHABLE_KEY,
+    }),
+    LIVE_PUBLISHABLE_KEY,
+  );
+  assert.equal(
+    dashboardAuth.resolveClerkPublishableKey({
+      CLERK_PUBLISHABLE_KEY: TEST_PUBLISHABLE_KEY,
+      NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: LIVE_PUBLISHABLE_KEY,
+    }),
+    TEST_PUBLISHABLE_KEY,
+  );
+});
+
 test("auth configuration endpoint returns only the publishable key with private response headers", async () => {
   const previous = {
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
