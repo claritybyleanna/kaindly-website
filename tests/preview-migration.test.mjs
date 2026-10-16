@@ -53,8 +53,9 @@ test("Preview migration runs only against a distinct Neon branch", async () => {
   assert.deepEqual(logs, ["Preview database isolation verified; applying workbook migration."]);
 });
 
-test("Vercel runs the guarded migration during every build", async () => {
+test("Vercel runs the curated site builder and serves only its static output", async () => {
   const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
 
-  assert.equal(config.buildCommand, "node scripts/migrate-preview-workbook-db.mjs");
+  assert.equal(config.buildCommand, "node scripts/build-vercel-site.mjs");
+  assert.equal(config.outputDirectory, ".vercel-static");
 });

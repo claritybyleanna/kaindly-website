@@ -1,6 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "node scripts/migrate-preview-workbook-db.mjs",
+  "buildCommand": "node scripts/build-vercel-site.mjs",
+  "outputDirectory": ".vercel-static",
   "rewrites": [
     {
       "source": "/api/blead-retention",
