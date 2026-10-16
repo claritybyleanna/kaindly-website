@@ -17,11 +17,19 @@
       <a class="dashboard-brand" href="/" aria-label="KAINDLY facilitator dashboard"><img src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY" width="166" height="32"></a>
       <p class="dashboard-eyebrow">Private facilitator workspace</p>
       <h1 id="access-title">Facilitator dashboard access</h1>
-      <p>Enter your approved email address. We’ll send a secure sign-in link.</p>
+      <p>Enter your approved email address. We’ll send a six-digit sign-in code.</p>
       <form class="dashboard-auth-form" data-dashboard-auth-form>
         <label for="dashboard-email">Email address</label>
         <input id="dashboard-email" type="email" name="email" autocomplete="email" required data-dashboard-auth-email>
-        <button class="dashboard-button dashboard-button--primary" type="submit">Email me a sign-in link</button>
+        <button class="dashboard-button dashboard-button--primary" type="submit">Email me a six-digit code</button>
+      </form>
+      <form class="dashboard-auth-form" data-dashboard-auth-code-form hidden>
+        <p>Enter the six-digit code from your email.</p>
+        <label for="dashboard-code">Six-digit code</label>
+        <input id="dashboard-code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required data-dashboard-auth-code>
+        <button class="dashboard-button dashboard-button--primary" type="submit">Verify code</button>
+        <button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-auth-resend>Send a new code</button>
+        <button class="dashboard-clear" type="button" data-dashboard-auth-change-email>Use a different email</button>
       </form>
       <p class="dashboard-auth-status" role="status" aria-live="polite" data-dashboard-auth-status></p>
     </section>

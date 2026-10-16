@@ -293,18 +293,18 @@ test("auth configuration endpoint fails closed when either Clerk key is malforme
   }
 });
 
-test("browser entry starts the installed Clerk email-link flow and completes verification", async () => {
+test("browser entry requests a Clerk email code and activates only the completed session", async () => {
   const {
-    completeDashboardEmailLink,
-    requestDashboardEmailLink,
+    requestDashboardEmailCode,
+    verifyDashboardEmailCode,
   } = await import("../assets/js/dashboard-auth-entry.js");
   const calls = [];
   const signInAttempt = {
-    supportedFirstFactors: [{ strategy: "email_link", emailAddressId: "email_primary" }],
-    createEmailLinkFlow() {
-      return {
-        startEmailLinkFlow: async (params) => calls.push(["start", params]),
-      };
+    supportedFirstFactors: [{ strategy: "email_code", emailAddressId: "email_primary" }],
+    prepareFirstFactor: async (params) => calls.push(["prepare", params]),
+    attemptFirstFactor: async (params) => {
+      calls.push(["attempt", params]);
+      return { status: "complete", createdSessionId: "sess_123" };
     },
   };
   const clerk = {
@@ -313,30 +313,37 @@ test("browser entry starts the installed Clerk email-link flow and completes ver
         create: async (params) => (calls.push(["create", params]), signInAttempt),
       },
     },
-    handleEmailLinkVerification: async (params) => calls.push(["verify", params]),
+    setActive: async (params) => calls.push(["active", params]),
   };
+  const redirects = [];
 
-  await requestDashboardEmailLink({
+  const preparedAttempt = await requestDashboardEmailCode({
     clerk,
     identifier: "person@example.com",
-    redirectUrl: "https://www.kaindly.ai/dashboard/verify/",
   });
-  await completeDashboardEmailLink(clerk);
+  await verifyDashboardEmailCode({
+    clerk,
+    signInAttempt: preparedAttempt,
+    code: "123456",
+    redirectTo: (url) => redirects.push(url),
+  });
 
   assert.deepEqual(calls, [
     ["create", { identifier: "person@example.com" }],
-    ["start", {
+    ["prepare", {
+      strategy: "email_code",
       emailAddressId: "email_primary",
-      redirectUrl: "https://www.kaindly.ai/dashboard/verify/",
     }],
-    ["verify", { redirectUrlComplete: "/dashboard/" }],
+    ["attempt", { strategy: "email_code", code: "123456" }],
+    ["active", { session: "sess_123" }],
   ]);
+  assert.deepEqual(redirects, ["/dashboard/"]);
 });
 
-test("browser form always shows one neutral confirmation and never embeds a server secret", async () => {
+test("browser form always shows one neutral PIN confirmation and never embeds a server secret", async () => {
   const {
-    MAGIC_LINK_CONFIRMATION,
-    submitDashboardEmailLink,
+    EMAIL_CODE_CONFIRMATION,
+    submitDashboardEmailCodeRequest,
   } = await import("../assets/js/dashboard-auth-entry.js");
   const status = { textContent: "" };
   const button = { disabled: false };
@@ -344,14 +351,14 @@ test("browser form always shows one neutral confirmation and never embeds a serv
     client: { signIn: { create: async () => { throw new Error("unknown account"); } } },
   };
 
-  await submitDashboardEmailLink({
+  const attempt = await submitDashboardEmailCodeRequest({
     clerk: failingClerk,
     identifier: "unknown@example.com",
-    redirectUrl: "https://www.kaindly.ai/dashboard/verify/",
     status,
     button,
   });
-  assert.equal(status.textContent, MAGIC_LINK_CONFIRMATION);
+  assert.equal(attempt, null);
+  assert.equal(status.textContent, EMAIL_CODE_CONFIRMATION);
   assert.equal(button.disabled, false);
   assert.doesNotMatch(status.textContent, /unknown|not found|authorized|account/iu);
 

@@ -21659,38 +21659,58 @@ API Error: ${n11}`, { data: t12, status: e12 });
 });
 
 // assets/js/dashboard-auth-entry.js
-var MAGIC_LINK_CONFIRMATION = "If that address can access this dashboard, a secure sign-in link is on its way.";
+var EMAIL_CODE_CONFIRMATION = "If that address can access this dashboard, a six-digit code is on its way.";
+var CODE_INVALID = "That code didn\u2019t work. Check the six digits and try again.";
 var AUTH_UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again shortly.";
-async function requestDashboardEmailLink({ clerk, identifier, redirectUrl }) {
+async function requestDashboardEmailCode({ clerk, identifier }) {
   const signInAttempt = await clerk.client.signIn.create({ identifier });
-  const emailLinkFactor = signInAttempt.supportedFirstFactors?.find(
-    (factor) => factor.strategy === "email_link" && typeof factor.emailAddressId === "string"
+  const emailCodeFactor = signInAttempt.supportedFirstFactors?.find(
+    (factor) => factor.strategy === "email_code" && typeof factor.emailAddressId === "string"
   );
-  if (!emailLinkFactor) throw new Error("Email-link sign-in is unavailable");
-  const { startEmailLinkFlow } = signInAttempt.createEmailLinkFlow();
-  await startEmailLinkFlow({
-    emailAddressId: emailLinkFactor.emailAddressId,
-    redirectUrl
+  if (!emailCodeFactor) throw new Error("Email-code sign-in is unavailable");
+  await signInAttempt.prepareFirstFactor({
+    strategy: "email_code",
+    emailAddressId: emailCodeFactor.emailAddressId
   });
+  return signInAttempt;
 }
-function completeDashboardEmailLink(clerk) {
-  return clerk.handleEmailLinkVerification({ redirectUrlComplete: "/dashboard/" });
+async function verifyDashboardEmailCode({
+  clerk,
+  signInAttempt,
+  code,
+  redirectTo = (url) => window.location.assign(url)
+}) {
+  const normalizedCode = String(code ?? "").trim();
+  if (!signInAttempt || !/^\d{6}$/u.test(normalizedCode)) {
+    throw new Error("A six-digit email code is required");
+  }
+  const result = await signInAttempt.attemptFirstFactor({
+    strategy: "email_code",
+    code: normalizedCode
+  });
+  if (result.status !== "complete" || typeof result.createdSessionId !== "string") {
+    throw new Error("Email-code sign-in is incomplete");
+  }
+  await clerk.setActive({ session: result.createdSessionId });
+  redirectTo("/dashboard/");
+  return result;
 }
-async function submitDashboardEmailLink({
+async function submitDashboardEmailCodeRequest({
   clerk,
   identifier,
-  redirectUrl,
   status,
   button
 }) {
   button.disabled = true;
+  let signInAttempt = null;
   try {
-    await requestDashboardEmailLink({ clerk, identifier, redirectUrl });
+    signInAttempt = await requestDashboardEmailCode({ clerk, identifier });
   } catch {
   } finally {
-    status.textContent = MAGIC_LINK_CONFIRMATION;
+    status.textContent = EMAIL_CODE_CONFIRMATION;
     button.disabled = false;
   }
+  return signInAttempt;
 }
 function showUnavailable(documentRef) {
   const status = documentRef.querySelector("[data-dashboard-auth-status]") ?? documentRef.querySelector("[data-dashboard-verification-status]");
@@ -21714,24 +21734,65 @@ async function initializeDashboardAuth({
   const ResolvedClerkClass = ClerkClass ?? (await Promise.resolve().then(() => (init_clerk(), clerk_exports))).Clerk;
   const clerk = new ResolvedClerkClass(configuration.publishableKey);
   await clerk.load();
-  if (documentRef.querySelector("[data-dashboard-auth-verify]")) {
-    await completeDashboardEmailLink(clerk);
-    return clerk;
-  }
   const form = documentRef.querySelector("[data-dashboard-auth-form]");
   const email = documentRef.querySelector("[data-dashboard-auth-email]");
+  const codeForm = documentRef.querySelector("[data-dashboard-auth-code-form]");
+  const code = documentRef.querySelector("[data-dashboard-auth-code]");
   const status = documentRef.querySelector("[data-dashboard-auth-status]");
   const button = form?.querySelector("button[type='submit']");
-  if (form && email && status && button) {
+  const codeButton = codeForm?.querySelector("button[type='submit']");
+  const resend = documentRef.querySelector("[data-dashboard-auth-resend]");
+  const changeEmail = documentRef.querySelector("[data-dashboard-auth-change-email]");
+  let signInAttempt = null;
+  let identifier = "";
+  if (form && email && codeForm && code && status && button && codeButton) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
-      await submitDashboardEmailLink({
+      identifier = email.value;
+      signInAttempt = await submitDashboardEmailCodeRequest({
         clerk,
-        identifier: email.value,
-        redirectUrl: new URL("/dashboard/verify/", locationRef.href).toString(),
+        identifier,
         status,
         button
       });
+      form.hidden = true;
+      codeForm.hidden = false;
+      code.focus();
+    });
+    codeForm.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      codeButton.disabled = true;
+      status.textContent = "Checking your code\u2026";
+      try {
+        await verifyDashboardEmailCode({
+          clerk,
+          signInAttempt,
+          code: code.value,
+          redirectTo: (url) => locationRef.assign(url)
+        });
+      } catch {
+        status.textContent = CODE_INVALID;
+        codeButton.disabled = false;
+      }
+    });
+    resend?.addEventListener("click", async () => {
+      resend.disabled = true;
+      const nextAttempt = await submitDashboardEmailCodeRequest({
+        clerk,
+        identifier,
+        status,
+        button: resend
+      });
+      if (nextAttempt) signInAttempt = nextAttempt;
+      code.focus();
+    });
+    changeEmail?.addEventListener("click", () => {
+      signInAttempt = null;
+      code.value = "";
+      codeForm.hidden = true;
+      form.hidden = false;
+      status.textContent = "";
+      email.focus();
     });
   }
   const signOut = documentRef.querySelector("[data-dashboard-sign-out]");
@@ -21749,9 +21810,9 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
   initializeDashboardAuth().catch(() => showUnavailable(document));
 }
 export {
-  MAGIC_LINK_CONFIRMATION,
-  completeDashboardEmailLink,
+  EMAIL_CODE_CONFIRMATION,
   initializeDashboardAuth,
-  requestDashboardEmailLink,
-  submitDashboardEmailLink
+  requestDashboardEmailCode,
+  submitDashboardEmailCodeRequest,
+  verifyDashboardEmailCode
 };

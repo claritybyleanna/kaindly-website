@@ -36,11 +36,19 @@ ${documentHead({
       ${brand({ href: "/" })}
       <p class="dashboard-eyebrow">Private facilitator workspace</p>
       <h1 id="access-title">Facilitator dashboard access</h1>
-      <p>Enter your approved email address. We’ll send a secure sign-in link.</p>
+      <p>Enter your approved email address. We’ll send a six-digit sign-in code.</p>
       <form class="dashboard-auth-form" data-dashboard-auth-form>
         <label for="dashboard-email">Email address</label>
         <input id="dashboard-email" type="email" name="email" autocomplete="email" required data-dashboard-auth-email>
-        <button class="dashboard-button dashboard-button--primary" type="submit">Email me a sign-in link</button>
+        <button class="dashboard-button dashboard-button--primary" type="submit">Email me a six-digit code</button>
+      </form>
+      <form class="dashboard-auth-form" data-dashboard-auth-code-form hidden>
+        <p>Enter the six-digit code from your email.</p>
+        <label for="dashboard-code">Six-digit code</label>
+        <input id="dashboard-code" type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" minlength="6" maxlength="6" required data-dashboard-auth-code>
+        <button class="dashboard-button dashboard-button--primary" type="submit">Verify code</button>
+        <button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-auth-resend>Send a new code</button>
+        <button class="dashboard-clear" type="button" data-dashboard-auth-change-email>Use a different email</button>
       </form>
       <p class="dashboard-auth-status" role="status" aria-live="polite" data-dashboard-auth-status></p>
     </section>
@@ -60,13 +68,13 @@ ${documentHead({
   })}
 <body class="dashboard-auth-page">
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <main id="main-content" class="dashboard-auth-shell" data-dashboard-auth-verify>
+  <main id="main-content" class="dashboard-auth-shell">
     <section class="dashboard-auth-card" aria-labelledby="verification-title">
       ${brand({ href: "/" })}
       <p class="dashboard-eyebrow">Private facilitator workspace</p>
-      <h1 id="verification-title">Completing your sign in</h1>
-      <p class="dashboard-auth-status" role="status" aria-live="polite" data-dashboard-verification-status>Verifying your secure link…</p>
-      <p><a class="dashboard-text-link" href="/dashboard/access/">Request a new link</a></p>
+      <h1 id="verification-title">Enter your sign-in code</h1>
+      <p>This dashboard now uses a six-digit code sent by email.</p>
+      <p><a class="dashboard-text-link" href="/dashboard/access/">Return to dashboard access</a></p>
     </section>
   </main>
 ${authScript()}
@@ -133,7 +141,7 @@ ${documentHead({
         </form>
         <p class="dashboard-state" data-dashboard-loading role="status" aria-live="polite">Loading responses…</p>
         <p class="dashboard-state" data-dashboard-empty role="status" aria-live="polite" hidden>No responses match these filters.</p>
-        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized role="alert" aria-live="assertive" hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Email yourself a new sign-in link</a> to continue.</p></div>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized role="alert" aria-live="assertive" hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Request a new six-digit code</a> to continue.</p></div>
         <div class="dashboard-state dashboard-state--alert" data-dashboard-unavailable role="alert" aria-live="assertive" hidden><h3>The dashboard is temporarily unavailable.</h3><p>Please try again shortly.</p><button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-retry>Try again</button></div>
         <div class="dashboard-responses" data-dashboard-responses aria-live="polite"></div>
       </div>

@@ -48,6 +48,18 @@ test("generated authentication bundle is free of trailing build whitespace", asy
   assert.doesNotMatch(bundle, /[ \t]+$/mu);
 });
 
+test("dashboard access uses a six-digit email PIN without magic-link copy", () => {
+  const access = renderDashboardAccess();
+  const verification = renderDashboardVerification();
+
+  assert.match(access, /data-dashboard-auth-code/u);
+  assert.match(access, /autocomplete="one-time-code"/u);
+  assert.match(access, /inputmode="numeric"/u);
+  assert.match(access, /pattern="\[0-9\]\{6\}"/u);
+  assert.match(access, /six-digit/u);
+  assert.doesNotMatch(`${access}\n${verification}`, /magic link|sign-in link|secure link/iu);
+});
+
 test("dashboard shell exposes the complete facilitator workflow", () => {
   const html = renderDashboardShell();
 
