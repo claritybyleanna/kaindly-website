@@ -75,10 +75,13 @@ test("deletes each expired row by its own deadline and is safe to repeat", async
   assert.deepEqual(rows.map(({ id }) => id), ["future"]);
 });
 
-test("keeps the old retention function as a direct compatibility delegate", async () => {
-  const generic = await import(routeUrl);
-  const legacy = await import("../api/blead-retention.js");
-  assert.equal(legacy.GET, generic.GET);
+test("keeps the old retention URL as a rewrite without another serverless function", async () => {
+  const config = JSON.parse(await readFile(new URL("../vercel.json", import.meta.url), "utf8"));
+
+  assert.equal(existsSync(new URL("../api/blead-retention.js", import.meta.url)), false);
+  assert.ok(config.rewrites.some(({ source, destination }) => (
+    source === "/api/blead-retention" && destination === "/api/workbook-retention"
+  )));
 });
 
 test("schedules only the client-neutral retention route", async () => {

@@ -200,6 +200,15 @@ test("Vercel middleware uses the Node.js runtime required by Clerk authorization
   assert.equal(config.runtime, "nodejs");
 });
 
+test("Vercel Hobby deployment stays within its twelve-function budget", () => {
+  const apiFunctions = readdirSync("api").filter((entry) => entry.endsWith(".js"));
+
+  assert.ok(
+    apiFunctions.length <= 11,
+    `Node middleware plus ${apiFunctions.length} API functions exceeds Vercel Hobby's limit of 12`,
+  );
+});
+
 test("Home exposes the shared, accessible launch shell", () => {
   assert.equal(existsSync("index.html"), true, "index.html is missing");
   assert.equal(existsSync("assets/css/site.css"), true, "shared stylesheet is missing");

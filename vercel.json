@@ -2,6 +2,10 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/blead-retention",
+      "destination": "/api/workbook-retention"
+    },
+    {
       "source": "/dashboard/api/auth-config",
       "destination": "/api/dashboard-auth-config"
     },
