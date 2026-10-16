@@ -191,6 +191,7 @@ const maintenanceDocument = `<!doctype html>
 </html>`;
 
 export const config = {
+  runtime: "nodejs",
   matcher: ["/((?!assets/).*)"],
 };
 

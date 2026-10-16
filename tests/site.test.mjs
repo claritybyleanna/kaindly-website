@@ -194,6 +194,12 @@ test("Vercel middleware serves the full site in production and keeps maintenance
   assert.doesNotMatch(maintenance, /<(?:button|input|select|textarea|form|iframe)\b/i);
 });
 
+test("Vercel middleware uses the Node.js runtime required by Clerk authorization", async () => {
+  const { config } = await import("../middleware.js");
+
+  assert.equal(config.runtime, "nodejs");
+});
+
 test("Home exposes the shared, accessible launch shell", () => {
   assert.equal(existsSync("index.html"), true, "index.html is missing");
   assert.equal(existsSync("assets/css/site.css"), true, "shared stylesheet is missing");
