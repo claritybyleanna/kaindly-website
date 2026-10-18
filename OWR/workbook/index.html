@@ -1,0 +1,1045 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Career Architecture Workbook</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="/assets/brand/icon-violet.svg" type="image/svg+xml">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:ital,wght@0,400;0,500;0,600;1,300&family=Jost:wght@600;700&family=Urbanist:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: sticky brand bar, focused workbook view, exercise rail + one working section at a time; stacks on phones. */
+:root {
+  --bg: #FFFFFF;
+  --surface: #FFFFFF;
+  --tint: #F3F0FF;
+  --tint-strong: #E2DBFE;
+  --fg: #242424;
+  --muted: #55525F;
+  --line: #DBD9E0;
+  --accent: #634CC8;
+  --btn-bg: #634CC8;
+  --btn-bg-hover: #4F3BA8;
+  --btn-fg: #FFFFFF;
+  --lime: #D4F489;
+  --lime-fg: #242424;
+  --ok: #3D7A25;
+  --warn-bg: #FBA956;
+  --warn-fg: #242424;
+  --well: #F7F6FA;
+  --shadow: 0 1px 2px rgba(99, 76, 200, 0.08), 0 4px 16px rgba(99, 76, 200, 0.06);
+  --font-display: 'Jost', 'Futura', 'Century Gothic', system-ui, sans-serif;
+  --font-sub: 'Archivo', 'Helvetica Neue', Arial, sans-serif;
+  --font-body: 'Urbanist', 'Avenir Next', 'Segoe UI', system-ui, sans-serif;
+  --radius: 5px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #19181E; --surface: #222029; --tint: #2A2638; --tint-strong: #3A3352;
+    --fg: #F1EFF6; --muted: #B8B4C4; --line: #3A3745; --accent: #B5A3FF;
+    --btn-bg: #8C6EFC; --btn-bg-hover: #A48BFF; --btn-fg: #121016;
+    --lime: #D4F489; --lime-fg: #1A1A1A; --ok: #A9D86B; --warn-bg: #FBA956; --warn-fg: #1A1A1A;
+    --well: #1F1D25; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #19181E; --surface: #222029; --tint: #2A2638; --tint-strong: #3A3352;
+  --fg: #F1EFF6; --muted: #B8B4C4; --line: #3A3745; --accent: #B5A3FF;
+  --btn-bg: #8C6EFC; --btn-bg-hover: #A48BFF; --btn-fg: #121016;
+  --lime: #D4F489; --lime-fg: #1A1A1A; --ok: #A9D86B; --warn-bg: #FBA956; --warn-fg: #1A1A1A;
+  --well: #1F1D25; --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 4px 16px rgba(0,0,0,0.25);
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.gutter { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1120px; margin: 0 auto; }
+
+/* Header */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.topbar .wrap { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding-block: 12px; }
+.brand { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.brand img { height: 26px; width: auto; display: block; }
+.logo-dark { display: none !important; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .logo-light { display: none !important; } :root:not([data-theme="light"]) .logo-dark { display: block !important; } }
+:root[data-theme="dark"] .logo-light { display: none !important; }
+:root[data-theme="dark"] .logo-dark { display: block !important; }
+.brand-session { font-family: var(--font-sub); font-size: 13px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border-left: 1px solid var(--line); padding-left: 14px; }
+nav.tabs { display: flex; gap: 4px; flex-wrap: wrap; }
+nav.tabs a {
+  font-family: var(--font-sub); font-weight: 500; font-size: 15px; color: var(--fg); text-decoration: none;
+  padding: 10px 14px; border-radius: var(--radius); min-height: 44px; display: inline-flex; align-items: center;
+}
+nav.tabs a:hover { background: var(--tint); }
+nav.tabs a[aria-current="page"] { background: var(--tint-strong); color: var(--accent); }
+.topbar-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.logout { margin: 0; }
+.logout button { min-height: 44px; padding: 9px 13px; background: transparent; color: var(--muted); }
+.logout button:hover { border-color: var(--accent); color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.notice { background: var(--tint); border-bottom: 1px solid var(--line); }
+.notice .wrap { padding-block: 10px; font-size: 15px; color: var(--fg); display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.notice strong { font-family: var(--font-sub); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+
+main { padding-block: 36px 72px; }
+section[data-view] { display: grid; gap: 28px; }
+section[data-view][hidden] { display: none !important; }
+
+/* Type */
+.eyebrow { font-family: var(--font-sub); font-weight: 500; font-size: 13px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; letter-spacing: -0.03em; margin: 0; text-wrap: balance; color: var(--fg); }
+h1 { font-size: clamp(38px, 6vw, 64px); line-height: 0.95; color: var(--accent); }
+h2 { font-size: clamp(28px, 3.6vw, 40px); line-height: 1; }
+h3 { font-size: 22px; line-height: 1.15; letter-spacing: -0.02em; }
+.lede { font-family: var(--font-sub); font-style: italic; font-weight: 300; font-size: clamp(19px, 2.2vw, 23px); line-height: 1.35; margin: 0; max-width: 62ch; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.small { font-size: 15px; }
+
+/* Blocks */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; display: grid; gap: 14px; min-width: 0; }
+.panel.tint { background: var(--tint); border-color: transparent; }
+.panel.lime { background: var(--lime); color: var(--lime-fg); border-color: transparent; }
+.panel.lime .eyebrow, .panel.lime h3 { color: var(--lime-fg); }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 20px; }
+.clean { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+ul.ticks { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+
+/* Agenda */
+.agenda { display: grid; gap: 0; border-top: 1px solid var(--line); }
+.agenda li { display: grid; grid-template-columns: 76px minmax(0, 1fr) auto; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); align-items: baseline; }
+.agenda .t { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--accent); font-variant-numeric: tabular-nums; }
+.agenda .half { font-family: var(--font-sub); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.agenda li.ex .what { font-weight: 600; }
+.agenda li.now { background: var(--tint); }
+
+/* Buttons */
+button, .btn {
+  font-family: var(--font-sub); font-weight: 600; font-size: 15px; letter-spacing: 0.02em;
+  min-height: 44px; padding: 10px 18px; border-radius: var(--radius); border: 1px solid var(--line);
+  background: var(--surface); color: var(--fg); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;
+}
+button:hover { border-color: var(--accent); }
+button.primary { background: var(--btn-bg); color: var(--btn-fg); border-color: var(--btn-bg); }
+button.primary:hover { background: var(--btn-bg-hover); border-color: var(--btn-bg-hover); }
+button.quiet { background: transparent; border-color: transparent; color: var(--accent); padding-inline: 10px; }
+button.quiet:hover { background: var(--tint); }
+button[disabled] { opacity: 0.5; cursor: not-allowed; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.row.spread { justify-content: space-between; }
+
+/* Plan layout */
+.plan { display: grid; grid-template-columns: 280px minmax(0, 1fr); gap: 32px; align-items: start; }
+@media (max-width: 860px) { .plan { grid-template-columns: minmax(0, 1fr); } }
+.rail { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 84px); display: grid; gap: 14px; }
+@media (max-width: 860px) { .rail { position: static; } }
+.rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.rail a {
+  display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center;
+  padding: 10px 12px; border-radius: var(--radius); text-decoration: none; color: var(--fg); border: 1px solid transparent; min-height: 44px;
+}
+.rail a:hover { background: var(--tint); }
+.rail a[aria-current="step"] { background: var(--tint-strong); border-color: transparent; }
+.rail .num { font-family: var(--font-display); font-weight: 700; font-size: 22px; color: var(--accent); text-align: center; font-variant-numeric: tabular-nums; }
+.rail .name { font-weight: 600; font-size: 15px; line-height: 1.25; display: block; }
+.rail .meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 4px; }
+.now-chip { font-family: var(--font-sub); font-size: 13px; color: var(--muted); }
+.now-chip b { color: var(--accent); font-weight: 600; }
+
+.status { font-family: var(--font-sub); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line); color: var(--muted); background: var(--surface); }
+.status.draft { background: var(--tint-strong); color: var(--fg); border-color: transparent; }
+.meta-label { font-family: var(--font-sub); font-size: 12px; color: var(--muted); }
+
+.ex-head { display: grid; gap: 12px; }
+.ex-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--font-sub); font-size: 14px; color: var(--muted); }
+.ex-meta b { color: var(--fg); font-weight: 600; }
+.leave { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+.leave .tag { background: var(--lime); color: var(--lime-fg); font-family: var(--font-sub); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
+
+/* Fields */
+.fields { display: grid; gap: 16px; }
+.field { display: grid; gap: 6px; }
+.field label { font-weight: 600; font-size: 15px; }
+.field .hint { font-size: 14px; color: var(--muted); }
+input[type="text"], input[type="date"], textarea {
+  width: 100%; font: inherit; font-size: 16px; color: var(--fg); background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; min-height: 44px;
+}
+textarea { min-height: 84px; resize: vertical; line-height: 1.45; }
+input:hover, textarea:hover { border-color: var(--muted); }
+.private-tag { font-family: var(--font-sub); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; margin-left: 6px; font-weight: 500; }
+
+.inline-confirm { background: var(--tint); border-radius: var(--radius); padding: 12px 14px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 15px; }
+.example-flag { font-size: 14px; color: var(--accent); font-family: var(--font-sub); }
+
+/* Prompt */
+.prompt { background: var(--tint); border-radius: var(--radius); padding: 20px 22px; display: grid; gap: 12px; min-width: 0; }
+.prompt-text { font-size: 16.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; max-width: none; }
+.prompt-text .slot { font-weight: 700; color: var(--accent); }
+.prompt-text .filled { background: var(--tint-strong); border-radius: 3px; padding: 0 3px; }
+.prompt .label { font-family: var(--font-sub); font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); }
+
+details.help { border: 1px solid var(--line); border-radius: var(--radius); padding: 0 18px; }
+details.help summary { cursor: pointer; font-family: var(--font-sub); font-weight: 600; padding: 14px 0; min-height: 44px; list-style-position: inside; }
+details.help[open] { padding-bottom: 18px; }
+details.help .body { display: grid; gap: 12px; }
+
+.disclosure { font-size: 15px; border-left: 0; background: var(--well); padding: 12px 14px; border-radius: var(--radius); }
+
+.savebar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; border-top: 1px solid var(--line); padding-top: 18px; }
+.save-state { font-size: 14px; color: var(--muted); display: inline-flex; align-items: center; gap: 8px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--line); display: inline-block; }
+.save-state.saved .dot { background: var(--ok); }
+.save-state.pending .dot { background: var(--accent); }
+.save-state.failed { color: var(--fg); }
+.save-state.failed .dot { background: var(--warn-bg); }
+
+pre.plan-out { background: var(--well); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px; white-space: pre-wrap; overflow-wrap: anywhere; font-family: var(--font-body); font-size: 16px; line-height: 1.55; margin: 0; max-height: 560px; overflow: auto; }
+
+.craft { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr)); gap: 12px; }
+.craft div { background: var(--tint); border-radius: var(--radius); padding: 16px; display: grid; gap: 4px; }
+.craft b { font-family: var(--font-display); font-size: 26px; color: var(--accent); line-height: 1; }
+.placeholder { border: 2px dashed var(--accent); border-radius: var(--radius); padding: 14px 16px; font-family: var(--font-sub); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); background: var(--tint); }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); padding: 12px 18px; border-radius: var(--radius); font-family: var(--font-sub); font-size: 15px; z-index: 20; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+hr.rule { border: 0; border-top: 1px solid var(--line); margin: 0; }
+@media (prefers-reduced-motion: no-preference) { button, nav.tabs a, .rail a { transition: background-color 120ms ease-out, border-color 120ms ease-out; } }
+</style>
+</head>
+<body data-workbook-id="owr-career-architecture" data-response-endpoint="/OWR/api/responses">
+
+<header class="topbar gutter">
+  <div class="wrap">
+    <div class="brand">
+      <img class="logo-light" src="/assets/brand/logo-secondary-violet.svg" alt="KAINDLY">
+      <img class="logo-dark" src="/assets/brand/logo-secondary-white.svg" alt="KAINDLY">
+      <span class="brand-session">OneWe Reach · Oct 20</span>
+    </div>
+    <div class="topbar-actions">
+      <nav class="tabs" aria-label="Workbook sections">
+        <a href="/OWR/">Session hub</a>
+        <a href="#plan" data-tab="plan">Workbook</a>
+        <a href="#resources" data-tab="resources">Resources</a>
+        <a href="#connections" data-tab="connections">Connections</a>
+      </nav>
+      <form class="logout" method="post" action="/OWR/logout/"><button type="submit">End session</button></form>
+    </div>
+  </div>
+</header>
+<div class="notice gutter" role="note">
+  <div class="wrap"><strong>Facilitator access</strong><span>Information entered in this workbook is submitted to facilitators only. Other attendees do not see your worksheet.</span></div>
+</div>
+
+<main class="gutter">
+  <div class="wrap">
+
+    <!-- OVERVIEW -->
+    <section data-view="overview" aria-labelledby="ov-title">
+      <div style="display:grid; gap:16px">
+        <p class="eyebrow">Pre-Conference Workshop · KAINDLY</p>
+        <h1 id="ov-title">Career Architecture in the AI Era</h1>
+        <p class="lede">Get clear on what you want to build, then find the people who can help you test it.</p>
+        <p class="muted">Leanna Baker Williams, PharmD, MS · Tuesday, October 20, 2026 · 4:15–5:45 p.m. Eastern · The Westin Charlotte</p>
+        <div class="row"><button class="primary" type="button" data-go="plan">Open my career plan</button><span class="now-chip" id="ov-now"></span></div>
+      </div>
+
+      <div class="grid-2">
+        <div class="panel">
+          <p class="eyebrow">Agenda · Eastern time</p>
+          <ol class="clean agenda" id="agenda"></ol>
+        </div>
+        <div style="display:grid; gap:20px; align-content:start">
+          <div class="panel tint">
+            <h3>Before you start</h3>
+            <ul class="ticks small">
+              <li>Use an AI tool and device your organization permits.</li>
+              <li>Use personal, fictional or appropriately de-identified examples.</li>
+              <li>Don’t put confidential employer, client or patient information into an unapproved tool.</li>
+              <li>No résumé upload or paid upgrade is needed.</li>
+              <li>You can fill in any field without AI, or leave a sensitive reflection blank.</li>
+              <li>Copying a prompt sends nothing. You decide what to paste into your AI tool.</li>
+            </ul>
+          </div>
+          <div class="panel">
+            <h3>Who can see your worksheet</h3>
+            <p class="small">Information entered in this workbook is submitted to facilitators only. Other attendees do not see your worksheet. Your full AI conversation is never included.</p>
+            <p class="small muted">Your entries save as you work. You don’t need to join networking or sign up for anything to use this workbook.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PLAN -->
+    <section data-view="plan" aria-label="My career plan" hidden>
+      <div class="plan">
+        <aside class="rail" aria-label="Exercises">
+          <div style="display:grid; gap:6px">
+            <p class="eyebrow">One career plan</p>
+            <span class="now-chip" id="rail-now"></span>
+          </div>
+          <ol id="rail"></ol>
+          <hr class="rule">
+          <span class="save-state" id="save-state-rail" aria-live="polite"><span class="dot"></span><span class="txt">Not saved yet</span></span>
+        </aside>
+        <div id="ex-body" style="display:grid; gap:24px; min-width:0"></div>
+      </div>
+    </section>
+
+    <!-- RESOURCES -->
+    <section data-view="resources" aria-labelledby="res-title" hidden>
+      <div style="display:grid; gap:12px">
+        <p class="eyebrow">Resources</p>
+        <h2 id="res-title">Everything from today, in one place</h2>
+        <p class="muted">Every prompt is here so you can revisit any step after the session.</p>
+      </div>
+      <div class="panel">
+        <h3>CRAFT: what makes these prompts work</h3>
+        <div class="craft">
+          <div><b>C</b><span><strong>Context.</strong> Your experience, priorities and constraints.</span></div>
+          <div><b>R</b><span><strong>Role.</strong> “Act as a thoughtful career-planning partner.”</span></div>
+          <div><b>A</b><span><strong>Action.</strong> Compare, interview, build, challenge, compile.</span></div>
+          <div><b>F</b><span><strong>Format.</strong> Facts, assumptions and unknowns kept apart.</span></div>
+          <div><b>T</b><span><strong>Tone.</strong> Ask before filling gaps. Don’t invent.</span></div>
+        </div>
+      </div>
+      <div style="display:grid; gap:14px" id="res-prompts"></div>
+      <div class="grid-2">
+        <div class="panel">
+          <h3>No device or account?</h3>
+          <p class="small">A complete paper worksheet and a saved demonstration cover every exercise. You can do the work on paper and test the prompts later.</p>
+          <div class="placeholder">[Paper worksheet download — add when ready]</div>
+        </div>
+        <div class="panel">
+          <h3>Using AI safely at work</h3>
+          <p class="small">A personal device does not make restricted company information okay to share. Use only tools and information your organization permits.</p>
+          <p class="small muted">Treat what the AI suggests as a starting point. Check every claim against your actual experience and remove anything it invented.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- CONNECTIONS -->
+    <section data-view="connections" aria-labelledby="con-title" hidden>
+      <div style="display:grid; gap:12px">
+        <p class="eyebrow">5:15–5:40 · Your people</p>
+        <h2 id="con-title">Choose what to bring into your networking profile</h2>
+        <p class="lede">Your plan gives you direction. People help you test it.</p>
+      </div>
+      <div class="grid-2">
+        <div class="panel" style="align-content:start">
+          <h3>Your introduction</h3>
+          <p class="small muted">Nothing moves here on its own. Bring in a suggestion from your plan only if you want it, then edit it. Sensitive alternatives, private constraints and your full plan stay out.</p>
+          <div class="fields">
+            <div class="field">
+              <label for="c-goal">What I want to learn or explore</label>
+              <textarea id="c-goal" data-conn="goal" placeholder="e.g. What a typical month looks like in a capability-building role"></textarea>
+              <div class="row"><button type="button" class="quiet" data-bring="goal">Bring in my “question for a real person”</button></div>
+            </div>
+            <div class="field">
+              <label for="c-offer">What I can offer</label>
+              <textarea id="c-offer" data-conn="offer" placeholder="A perspective, skill or experience you’re glad to share"></textarea>
+            </div>
+            <div class="field">
+              <label for="c-intro">Short introduction</label>
+              <textarea id="c-intro" data-conn="intro" placeholder="Two sentences: who you are and what you’re exploring"></textarea>
+              <div class="row"><button type="button" class="quiet" data-bring="intro">Draft from my contribution statement</button></div>
+            </div>
+            <div class="grid-2" style="gap:14px">
+              <div class="field">
+                <label for="c-company">Company</label>
+                <input type="text" id="c-company" data-conn="company" autocomplete="organization">
+              </div>
+              <div class="field">
+                <label for="c-linkedin">LinkedIn <span class="private-tag">Optional</span></label>
+                <input type="text" id="c-linkedin" data-conn="linkedin" placeholder="linkedin.com/in/…">
+              </div>
+            </div>
+          </div>
+          <div class="row"><button type="button" class="primary" id="copy-profile">Copy profile text</button></div>
+        </div>
+        <div style="display:grid; gap:20px; align-content:start">
+          <div class="panel tint">
+            <h3>How a connection works</h3>
+            <ol class="ticks small">
+              <li>Clarify what you want to learn or explore.</li>
+              <li>Introduce yourself and what you can offer.</li>
+              <li>Find someone with a relevant perspective.</li>
+              <li>Connect by mutual agreement.</li>
+              <li>Choose a next conversation or shared session.</li>
+            </ol>
+          </div>
+          <div class="panel">
+            <h3>Separate choices, always</h3>
+            <p class="small">Workbook information is available to facilitators as you work. Publishing a profile to attendees and sharing your email or LinkedIn after a mutual match are separate decisions. Other attendees do not see your worksheet.</p>
+          </div>
+          <div class="panel lime">
+            <p class="eyebrow">In the room today</p>
+            <p class="small">The KAINDLY Connections demo uses fictional people, simulated matching and simulated emails. It is not a live attendee network yet. For today, pick one person in the room you’d like to talk with.</p>
+          </div>
+          <div class="placeholder">[KAINDLY Connections link — add when attendee access is authorized]</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</main>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<script type="module">
+import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
+(function () {
+  'use strict';
+
+  // ---------- Content ----------
+  var EX = [
+    {
+      id: 'ex1', n: 1, title: 'Compare two directions', time: '4:25–4:35', start: '16:25', end: '16:35', mins: 10,
+      split: '2-min demo · 6-min individual work · 2-min checkpoint',
+      purpose: 'Name two possibilities worth exploring, not two irreversible decisions. Compare them using what matters to you.',
+      output: 'A short two-direction comparison and one provisional choice.',
+      fields: [
+        { k: 'experience', label: 'My experience in one sentence' },
+        { k: 'dirA', label: 'Direction A' },
+        { k: 'dirB', label: 'Direction B' },
+        { k: 'priorities', label: 'My three priorities', multi: true },
+        { k: 'constraints', label: 'Practical constraints', multi: true, priv: true },
+        { k: 'provisional', label: 'My provisional direction to explore' },
+        { k: 'unknown', label: 'Still unknown' }
+      ],
+      prompts: [{ label: 'Copy this prompt', text: 'Act as a thoughtful career-planning partner. My experience is {{experience|brief context}}. I am comparing {{dirA|direction A}} and {{dirB|direction B}}. My priorities and constraints are {{@criteria|criteria}}. If I have not named two directions, help me identify two plausible options from the experience I provide. Ask clarifying questions before filling important gaps. Compare the two directions against my criteria, including contribution, learning, and practical fit beyond pay. Separate supplied facts, assumptions, and unknowns. Suggest one low-risk way to learn more about each. Do not invent achievements, job requirements, salary figures, or guaranteed outcomes. I will choose what to explore.' }],
+      acceptedHint: 'Keep only the comparison points you’ve checked against your own experience.',
+      help: ['Ask yourself: does this sound like you, or like a generic career plan?', 'Correct one assumption the AI made, then ask again.', 'A provisional choice is enough. Unresolved is a valid answer.'],
+      example: {
+        experience: 'Biopharma professional with years of launch-planning experience.',
+        dirA: 'An internal capability-building role',
+        dirB: 'Independent advisory work',
+        priorities: 'Less travel; no relocation; expert contribution rather than managing more people',
+        constraints: 'About two hours a week available for exploration',
+        provisional: 'An internal capability-building role',
+        unknown: 'Whether these roles really involve less travel'
+      }
+    },
+    {
+      id: 'ex2', n: 2, title: 'Find the meaning behind the goal', time: '4:35–4:43', start: '16:35', end: '16:43', mins: 8,
+      split: '1-min explanation · 5-min AI interview or solo reflection · 2-min review',
+      purpose: 'Choose one reflection you can’t answer yet. Let AI ask one question at a time. Stop after a few answers and correct its summary.',
+      output: 'One statement of the contribution you want to make, approved by you.',
+      fields: [
+        { k: 'question', label: 'The question I’m struggling with' },
+        { k: 'experience2', label: 'A concrete experience that matters', multi: true, priv: true },
+        { k: 'contribution', label: 'I want my next chapter to make ___ possible for ___', multi: true },
+        { k: 'corrected', label: 'One AI assumption I corrected' }
+      ],
+      prompts: [{ label: 'Copy this prompt', text: 'I am not sure how to answer: {{question|reflection question}}. Interview me one question at a time. Start with concrete experiences and help me explore what I want my next chapter to make possible for me and for the people I serve. After a few answers, offer a short draft reflection based only on what I said and ask me to correct it. Do not choose my career direction for me.' }],
+      acceptedHint: 'Keep the draft reflection only after you’ve corrected it. Don’t paste the interview transcript.',
+      help: ['Stuck? Start with: “When did your work feel most useful?”', 'You never need to discuss burnout, health, family or employer frustrations, here or out loud.', 'No AI? Answer the same questions on your own.'],
+      example: {
+        question: 'What kind of contribution do I want my next chapter to be about?',
+        experience2: 'Coaching newer colleagues until they could plan launches without constant support.',
+        contribution: 'I want my next chapter to make confident, independent launch planning possible for newer colleagues.',
+        corrected: 'It assumed I wanted to become a people manager. I want to enable others without managing more people.'
+      }
+    },
+    {
+      id: 'ex3', n: 3, title: 'Build the Impact Ladder', time: '4:43–4:55', start: '16:43', end: '16:55', mins: 12,
+      split: '3-min worked example · 7-min build · 2-min check',
+      purpose: 'Connect a meaningful future change to evidence and actions. Start with one item at each level.',
+      output: 'Four connected, editable sentences.',
+      fields: [
+        { k: 'impact', label: 'Impact and horizon', hint: 'What change do I want to make possible, and by when?' },
+        { k: 'outcome', label: 'Outcome that would indicate progress' },
+        { k: 'outputs', label: 'Output I can produce', hint: 'Tangible work or evidence' },
+        { k: 'activity', label: 'Weekly activity within my control' }
+      ],
+      prompts: [{ label: 'Copy this prompt', text: 'For the direction I choose to explore, {{ex1.provisional|direction}}, help me build four connected levels: Impact (the change I want to make possible over my chosen horizon); Outcomes (changes that would indicate progress); Outputs (tangible work or evidence); and Activities (feasible weekly actions that create those outputs). Use my context and constraints. Ask about missing information rather than inventing it. Start with one concrete item at each level and show how the levels connect. Treat future results as intentions to test, not predictions.' }],
+      acceptedHint: 'Note how your levels connect, or what you changed from the AI’s version.',
+      help: ['Check each link: if you do the activity, will it create the output?', 'What could that output help you learn?', 'Finishing activities doesn’t guarantee a job or promotion. These are intentions to test.'],
+      example: {
+        impact: 'Move toward a capability-building role within my travel limits.',
+        outcome: 'Clarify demand and demonstrate transferable experience.',
+        outputs: 'A de-identified case narrative and notes from role-expectation conversations.',
+        activity: 'Outline one case and identify two people to talk with this week.'
+      }
+    },
+    {
+      id: 'ex4', n: 4, title: 'Test the weakest assumption', time: '4:55–5:05', start: '16:55', end: '17:05', mins: 10,
+      split: '2-min demo · 6-min work · 2-min checkpoint',
+      purpose: 'Find what you’re assuming, then design a small way to learn more before committing.',
+      output: 'One assumption, one bounded experiment and a useful conversation target.',
+      fields: [
+        { k: 'assumption', label: 'I am assuming' },
+        { k: 'have', label: 'Evidence I have' },
+        { k: 'missing', label: 'Evidence missing' },
+        { k: 'experiment', label: 'My low-risk 30-day experiment', multi: true },
+        { k: 'source', label: 'A person or source to consult', hint: 'Describe the type of person. No confidential names needed.' },
+        { k: 'revise', label: 'I would revise my plan if' }
+      ],
+      prompts: [{ label: 'Copy this prompt', text: 'Review my ladder and two-direction comparison. Identify the most important unsupported assumption and any weak link between activities, outputs, outcomes, and impact. Ask me what evidence I already have. Suggest a low-risk 30-day experiment, an appropriate real-world source to consult, and what evidence would make me revise my direction. Keep the scope within {{ex1.constraints|time and practical constraints}}. Do not recommend resigning or making a financial commitment as a required next step.' }],
+      acceptedHint: 'Separate what the AI suggested from what you actually know.',
+      help: ['“AI suggested it” is not the same as real-world evidence.', 'Is the experiment doable in the time you actually have?'],
+      example: {
+        assumption: 'Capability-building roles involve less travel.',
+        have: 'Secondhand impressions only.',
+        missing: 'Actual travel expectations and responsibilities in these roles.',
+        experiment: 'Speak with two people doing the work and compare their actual responsibilities before treating this as true.',
+        source: 'Two people currently in capability-building roles.',
+        revise: 'Travel turns out to be similar to my current role.'
+      }
+    },
+    {
+      id: 'ex5', n: 5, title: 'Save and test the plan', time: '5:05–5:15', start: '17:05', end: '17:15', mins: 10,
+      split: '2-min explanation · 4-min compile, review and save · 3-min fresh-chat test · 1-min bridge',
+      purpose: 'Keep only what you’ve accepted. Save a copy you control, then test whether a new conversation can use it without remembering earlier work.',
+      output: 'A reviewed portable plan plus one actionable next step.',
+      fields: [
+        { k: 'sevenDay', label: 'My seven-day action', multi: true },
+        { k: 'reviewDate', label: 'My 30-day review date', type: 'date' },
+        { k: 'unresolved', label: 'What remains unresolved', multi: true },
+        { k: 'question', label: 'One question for a real person' }
+      ],
+      prompts: [
+        { label: 'Step 1 · Compile (same conversation)', text: 'Compile a portable career plan using only the choices and claims I have reviewed and accepted in this conversation. Include my two directions and comparison criteria, provisional direction, four-level Impact Ladder, assumption to verify, low-risk experiment, seven-day action, and 30-day review date. Mark unresolved questions clearly. Do not add achievements, decisions, or dates I have not supplied. Keep it concise and editable. I will check it before saving.' },
+        { label: 'Step 2 · Test (new chat)', text: 'Act as a career-planning partner. Use the reviewed plan below as context, ask if an important detail is missing, and distinguish facts from assumptions. Do not assume you remember an earlier conversation. Here is my plan: {{@plan|paste reviewed plan}}. Given my priorities and available time, what is one useful action this week, and what assumption should I verify before doing it?' }
+      ],
+      acceptedHint: 'What did the fresh chat suggest that you’ll actually do? Flag anything it invented.',
+      help: ['Short on time? Review and save first. You can run the fresh-chat test after the session.', 'Flag invented facts. Don’t silently accept them.', 'The workbook fills Step 2 with your compiled plan from this page. Check it before you paste.'],
+      example: {
+        sevenDay: 'Draft the case outline and invite two role-expectation conversations.',
+        reviewDate: '',
+        unresolved: 'Whether there is demand for this role inside my current organization.',
+        question: 'What does a typical month look like in your role?'
+      }
+    }
+  ];
+
+  var AGENDA = [
+    ['4:15', '16:15', '16:20', 'Why are you here?', 'First 60'],
+    ['4:20', '16:20', '16:25', 'How this works and where resources live', ''],
+    ['4:25', '16:25', '16:35', 'Exercise 1 · Compare two directions', '', 'ex1'],
+    ['4:35', '16:35', '16:43', 'Exercise 2 · Find the meaning behind the goal', '', 'ex2'],
+    ['4:43', '16:43', '16:55', 'Exercise 3 · Build the Impact Ladder', '', 'ex3'],
+    ['4:55', '16:55', '17:05', 'Exercise 4 · Test the weakest assumption', '', 'ex4'],
+    ['5:05', '17:05', '17:15', 'Exercise 5 · Save and test the plan', '', 'ex5'],
+    ['5:15', '17:15', '17:20', 'Connect your direction to relationships', 'Final 30'],
+    ['5:20', '17:20', '17:40', 'KAINDLY Connections and networking', ''],
+    ['5:40', '17:40', '17:45', 'Questions and one next step', '']
+  ];
+
+  var STORE_KEY = 'cae-workbook-v1';
+  var submissionClient = createOwrSubmissionClient({
+    workbookId: document.body.dataset.workbookId,
+    endpoint: document.body.dataset.responseEndpoint
+  });
+
+  // ---------- State ----------
+  function blankState() {
+    var s = { fields: {}, accepted: {}, help: {}, conn: {}, examples: {}, savedAt: null };
+    EX.forEach(function (e) { s.fields[e.id] = {}; });
+    return s;
+  }
+  var state = blankState();
+  var storageOk = true;
+  try {
+    var raw = window.localStorage.getItem(STORE_KEY);
+    if (raw) {
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        state = Object.assign(blankState(), parsed);
+        EX.forEach(function (e) { if (!state.fields[e.id]) state.fields[e.id] = {}; });
+      }
+    }
+  } catch (err) { storageOk = false; }
+
+  var current = 'ex1';
+
+  // ---------- Helpers ----------
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+  function $(sel, root) { return (root || document).querySelector(sel); }
+  function $all(sel, root) { return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function exById(id) { for (var i = 0; i < EX.length; i++) if (EX[i].id === id) return EX[i]; return null; }
+  function val(exId, k) { var f = state.fields[exId] || {}; return (f[k] || '').trim(); }
+  function fmtTime(ts) { try { return new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); } catch (e) { return ''; } }
+  function fmtDate(iso) { if (!iso) return ''; var p = iso.split('-'); if (p.length !== 3) return iso; var d = new Date(+p[0], +p[1] - 1, +p[2]); return d.toLocaleDateString([], { year: 'numeric', month: 'long', day: 'numeric' }); }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = $('#toast'); t.textContent = msg; t.hidden = false;
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.hidden = true; }, 2600);
+  }
+
+  function copyText(text, okMsg) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      var ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      document.body.removeChild(ta);
+      toast(ok ? okMsg : 'Couldn’t copy automatically. Select the text and copy it yourself.');
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast(okMsg); }, fallback);
+    } else { fallback(); }
+  }
+
+  // ---------- Plan compile ----------
+  function line(label, v) { return v ? '- ' + label + ': ' + v + '\n' : ''; }
+  function compilePlan() {
+    var out = '';
+    var a = state.accepted || {};
+    var s1 = line('My experience', val('ex1', 'experience')) + line('Direction A', val('ex1', 'dirA')) + line('Direction B', val('ex1', 'dirB')) + line('Priorities', val('ex1', 'priorities')) + line('Constraints', val('ex1', 'constraints')) + line('Provisional direction to explore', val('ex1', 'provisional')) + line('Still unknown (unresolved)', val('ex1', 'unknown')) + line('Comparison notes I accepted', (a.ex1 || '').trim());
+    var s2 = line('Contribution I want to make', val('ex2', 'contribution')) + line('Experience behind it', val('ex2', 'experience2')) + line('Assumption I corrected', val('ex2', 'corrected')) + line('Reflection I accepted', (a.ex2 || '').trim());
+    var s3 = line('Impact', val('ex3', 'impact')) + line('Outcome', val('ex3', 'outcome')) + line('Output', val('ex3', 'outputs')) + line('Weekly activity', val('ex3', 'activity')) + line('Notes', (a.ex3 || '').trim());
+    var s4 = line('Assumption to verify', val('ex4', 'assumption')) + line('Evidence I have', val('ex4', 'have')) + line('Evidence missing (unresolved)', val('ex4', 'missing')) + line('30-day experiment', val('ex4', 'experiment')) + line('Person or source to consult', val('ex4', 'source')) + line('I would revise my plan if', val('ex4', 'revise')) + line('Notes', (a.ex4 || '').trim());
+    var s5 = line('Seven-day action', val('ex5', 'sevenDay')) + line('30-day review date', fmtDate(val('ex5', 'reviewDate'))) + line('Unresolved', val('ex5', 'unresolved')) + line('Question for a real person', val('ex5', 'question')) + line('Fresh-chat takeaway', (a.ex5 || '').trim());
+    if (!(s1 + s2 + s3 + s4 + s5)) return '';
+    out += 'MY PORTABLE CAREER PLAN\nCareer Architecture in the AI Era · OneWe Reach · October 20, 2026\nEverything below is reviewed by me. Items marked unresolved still need checking.\n';
+    if (s1) out += '\nTWO DIRECTIONS\n' + s1;
+    if (s2) out += '\nWHAT I WANT TO MAKE POSSIBLE\n' + s2;
+    if (s3) out += '\nIMPACT LADDER\n' + s3;
+    if (s4) out += '\nASSUMPTION TO TEST\n' + s4;
+    if (s5) out += '\nNEXT STEPS\n' + s5;
+    return out.trim();
+  }
+
+  // ---------- Prompt fill ----------
+  function resolveSlot(exId, key) {
+    if (key === '@criteria') {
+      var p = val('ex1', 'priorities'), c = val('ex1', 'constraints');
+      if (p && c) return p + '; constraints: ' + c;
+      return p || c;
+    }
+    if (key === '@plan') return compilePlan();
+    if (key.indexOf('.') > -1) { var parts = key.split('.'); return val(parts[0], parts[1]); }
+    return val(exId, key);
+  }
+  function fillPrompt(exId, text, asHtml) {
+    return text.replace(/\{\{([^|}]+)\|([^}]+)\}\}/g, function (m, key, ph) {
+      var v = resolveSlot(exId, key);
+      if (asHtml) return v ? '<span class="filled">' + esc(v) + '</span>' : '<span class="slot">[' + esc(ph) + ']</span>';
+      return v ? v : '[' + ph + ']';
+    }).replace(/(^|>)([^<]*)(?=<|$)/g, function (m, a, b) { return a + b; });
+  }
+  function promptHtml(exId, text) {
+    // Escape static text, keep slot markup
+    var parts = text.split(/(\{\{[^}]+\}\})/g);
+    return parts.map(function (p) {
+      var m = p.match(/^\{\{([^|}]+)\|([^}]+)\}\}$/);
+      if (!m) return esc(p);
+      var v = resolveSlot(exId, m[1]);
+      return v ? '<span class="filled">' + esc(v) + '</span>' : '<span class="slot">[' + esc(m[2]) + ']</span>';
+    }).join('');
+  }
+
+  // ---------- Status ----------
+  function hasContent(exId) {
+    var f = state.fields[exId] || {};
+    for (var k in f) if (f[k] && String(f[k]).trim()) return true;
+    if ((state.accepted[exId] || '').trim()) return true;
+    if ((state.help[exId] || '').trim()) return true;
+    return false;
+  }
+  function currentValueFor(exId, key) {
+    if (key === '__accepted') return (state.accepted[exId] || '').trim();
+    if (key === '__help') return (state.help[exId] || '').trim();
+    return val(exId, key);
+  }
+  function statusOf(exId) {
+    return hasContent(exId) ? { k: 'draft', label: 'In progress' } : { k: 'none', label: 'Not started' };
+  }
+
+  // ---------- Saving ----------
+  var saveTimer = null;
+  function setSaveState(kind, text) {
+    $all('.save-state').forEach(function (el) {
+      el.className = 'save-state ' + kind;
+      var t = el.querySelector('.txt'); if (t) t.textContent = text;
+    });
+    var fb = $('#save-fallback'); if (fb) fb.hidden = kind !== 'failed';
+  }
+  function saveNow() {
+    clearTimeout(saveTimer);
+    try {
+      state.savedAt = Date.now();
+      var payload = JSON.stringify(state);
+      window.localStorage.setItem(STORE_KEY, payload);
+      var back = window.localStorage.getItem(STORE_KEY);
+      if (back !== payload) throw new Error('mismatch');
+      storageOk = true;
+      setSaveState('saved', 'Saved at ' + fmtTime(state.savedAt));
+      return true;
+    } catch (err) {
+      storageOk = false;
+      setSaveState('failed', 'Couldn’t save yet. Keep this page open and try again.');
+      return false;
+    }
+  }
+  function scheduleSave() {
+    setSaveState('pending', 'Saving…');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 700);
+  }
+  var facilitatorSaveTimers = {};
+  function facilitatorFields(exId) {
+    var fields = {};
+    var exercise = exById(exId);
+    if (!exercise) return fields;
+    exercise.fields.forEach(function (field) { fields[field.k] = currentValueFor(exId, field.k); });
+    fields.__accepted = currentValueFor(exId, '__accepted');
+    fields.__help = currentValueFor(exId, '__help');
+    return fields;
+  }
+  function saveToFacilitators(exId) {
+    clearTimeout(facilitatorSaveTimers[exId]);
+    return submissionClient.save(exId, facilitatorFields(exId)).then(function () {
+      state.savedAt = Date.now();
+      setSaveState('saved', 'Saved at ' + fmtTime(state.savedAt));
+      return true;
+    }, function () {
+      setSaveState('failed', 'Couldn’t save to the facilitators. Keep this page open and try again.');
+      return false;
+    });
+  }
+  function scheduleFacilitatorSave(exId) {
+    setSaveState('pending', 'Saving…');
+    clearTimeout(facilitatorSaveTimers[exId]);
+    facilitatorSaveTimers[exId] = setTimeout(function () { saveToFacilitators(exId); }, 700);
+  }
+  function initialSaveState() {
+    if (!storageOk) setSaveState('failed', 'This browser isn’t saving locally. Keep this page open and copy your plan before you leave.');
+    else if (state.savedAt) setSaveState('saved', 'Saved at ' + fmtTime(state.savedAt));
+    else setSaveState('', 'Not saved yet');
+  }
+
+  // ---------- Now (Eastern) ----------
+  function nowEastern() {
+    try {
+      var parts = new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+      var o = {}; parts.forEach(function (p) { o[p.type] = p.value; });
+      return { date: o.year + '-' + o.month + '-' + o.day, hm: o.hour + ':' + o.minute };
+    } catch (e) { return null; }
+  }
+  function nowItem() {
+    var n = nowEastern(); if (!n || n.date !== '2026-10-20') return null;
+    for (var i = 0; i < AGENDA.length; i++) { if (n.hm >= AGENDA[i][1] && n.hm < AGENDA[i][2]) return AGENDA[i]; }
+    return null;
+  }
+  function renderNow() {
+    var item = nowItem();
+    var ov = $('#ov-now'), rn = $('#rail-now');
+    if (item) {
+      var txt = 'Now in the room: <b>' + esc(item[3]) + '</b>';
+      ov.innerHTML = txt; rn.innerHTML = txt + ' <span class="muted">(a suggestion, not a lock)</span>';
+    } else {
+      ov.textContent = 'Session: Tuesday, October 20, 4:15 p.m. ET';
+      rn.textContent = 'Work at your own pace. Move between exercises any time.';
+    }
+    $all('#agenda li').forEach(function (li) { li.classList.toggle('now', !!item && li.getAttribute('data-start') === item[1]); });
+  }
+
+  // ---------- Render: agenda ----------
+  function renderAgenda() {
+    $('#agenda').innerHTML = AGENDA.map(function (a) {
+      var what = a[5] ? '<a href="#' + a[5] + '" style="color:inherit">' + esc(a[3]) + '</a>' : esc(a[3]);
+      return '<li class="' + (a[5] ? 'ex' : '') + '" data-start="' + a[1] + '"><span class="t">' + a[0] + '</span><span class="what">' + what + '</span><span class="half">' + esc(a[4]) + '</span></li>';
+    }).join('');
+  }
+
+  // ---------- Render: rail ----------
+  function renderRail() {
+    var items = EX.map(function (e) {
+      var st = statusOf(e.id);
+      return '<li><a href="#' + e.id + '" data-ex="' + e.id + '"' + (current === e.id ? ' aria-current="step"' : '') + '>' +
+        '<span class="num">' + e.n + '</span><span><span class="name">' + esc(e.title) + '</span><span class="meta"><span class="status ' + st.k + '">' + st.label + '</span></span></span></a></li>';
+    });
+    items.push('<li><a href="#myplan" data-ex="myplan"' + (current === 'myplan' ? ' aria-current="step"' : '') + '><span class="num" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle"><path d="M20 6 9 17l-5-5"></path></svg></span><span><span class="name">My compiled plan</span><span class="meta"><span class="meta-label">Copy or download</span></span></span></a></li>');
+    $('#rail').innerHTML = items.join('');
+  }
+  function refreshStatuses() {
+    EX.forEach(function (e) {
+      var a = $('#rail a[data-ex="' + e.id + '"] .status'); if (!a) return;
+      var st = statusOf(e.id); a.className = 'status ' + st.k; a.textContent = st.label;
+    });
+    var head = $('#ex-status'); if (head && current !== 'myplan') { var st = statusOf(current); head.className = 'status ' + st.k; head.textContent = st.label; }
+  }
+
+  // ---------- Render: exercise ----------
+  function fieldHtml(e, f) {
+    var id = 'f-' + e.id + '-' + f.k;
+    var v = (state.fields[e.id] || {})[f.k] || '';
+    var label = esc(f.label) + (f.priv ? '<span class="private-tag">Facilitators only</span>' : '');
+    var hint = f.hint ? '<span class="hint" id="' + id + '-h">' + esc(f.hint) + '</span>' : '';
+    var desc = f.hint ? ' aria-describedby="' + id + '-h"' : '';
+    var input;
+    if (f.type === 'date') input = '<input type="date" id="' + id + '" data-ex="' + e.id + '" data-k="' + f.k + '" value="' + esc(v) + '"' + desc + '>';
+    else if (f.multi) input = '<textarea id="' + id + '" data-ex="' + e.id + '" data-k="' + f.k + '" rows="2"' + desc + '>' + esc(v) + '</textarea>';
+    else input = '<input type="text" id="' + id + '" data-ex="' + e.id + '" data-k="' + f.k + '" value="' + esc(v) + '"' + desc + '>';
+    return '<div class="field"><label for="' + id + '">' + label + '</label>' + hint + input + '</div>';
+  }
+
+  function renderExercise() {
+    var body = $('#ex-body');
+    if (current === 'myplan') { renderMyPlan(); return; }
+    var e = exById(current); if (!e) { current = 'ex1'; e = EX[0]; }
+    var st = statusOf(e.id);
+    var idx = EX.indexOf(e);
+    var prev = idx > 0 ? EX[idx - 1] : null;
+    var next = idx < EX.length - 1 ? EX[idx + 1] : null;
+    var exampleOn = state.examples && state.examples[e.id];
+
+    var prompts = e.prompts.map(function (p, i) {
+      return '<div class="prompt"><div class="row spread"><span class="label">' + esc(p.label) + '</span><button type="button" class="primary" data-copy-prompt="' + i + '">Copy prompt</button></div>' +
+        '<p class="prompt-text" id="prompt-' + i + '">' + promptHtml(e.id, p.text) + '</p>' +
+        '<p class="small muted">Highlighted text comes from your answers. Bracketed slots are still open: fill them here or in your AI tool.</p></div>';
+    }).join('');
+
+    body.innerHTML =
+      '<div class="ex-head">' +
+        '<div class="row spread"><p class="eyebrow">Exercise ' + e.n + ' of 5</p><span class="status ' + st.k + '" id="ex-status">' + st.label + '</span></div>' +
+        '<h2 id="ex-title" tabindex="-1">' + esc(e.title) + '</h2>' +
+        '<p class="lede">' + esc(e.purpose) + '</p>' +
+        '<div class="leave"><span class="tag">You will leave with</span><span>' + esc(e.output) + '</span></div>' +
+        '<div class="ex-meta"><span><b>In the room:</b> ' + esc(e.split) + '</span></div>' +
+      '</div>' +
+      '<div class="panel">' +
+        '<div class="row spread"><h3>Fill in</h3><button type="button" class="quiet" id="load-example">Show fictional example</button></div>' +
+        '<div class="inline-confirm" id="example-confirm" hidden><span>Replace your answers in this exercise with the fictional example?</span><button type="button" id="example-yes">Replace</button><button type="button" class="quiet" id="example-no">Cancel</button></div>' +
+        (exampleOn ? '<p class="example-flag" id="example-flag">Fictional example loaded. Replace it with your own answers.</p>' : '') +
+        '<div class="fields">' + e.fields.map(function (f) { return fieldHtml(e, f); }).join('') + '</div>' +
+      '</div>' +
+      prompts +
+      '<div class="panel">' +
+        '<div class="field"><label for="acc-' + e.id + '">What I’m keeping from the AI response</label><span class="hint" id="acc-' + e.id + '-h">' + esc(e.acceptedHint) + '</span>' +
+        '<textarea id="acc-' + e.id + '" data-accepted="' + e.id + '" rows="3" aria-describedby="acc-' + e.id + '-h">' + esc(state.accepted[e.id] || '') + '</textarea></div>' +
+      '</div>' +
+      '<details class="help"><summary>Need help?</summary><div class="body">' +
+        '<ul class="ticks small">' + e.help.map(function (h) { return '<li>' + esc(h) + '</li>'; }).join('') + '</ul>' +
+        '<p class="small">In the room, raise your hand and Leanna will come to you.</p>' +
+        '<div class="field"><label for="help-' + e.id + '">I need help with</label><input type="text" id="help-' + e.id + '" data-help="' + e.id + '" value="' + esc(state.help[e.id] || '') + '"></div>' +
+      '</div></details>' +
+      '<p class="disclosure">Information entered in this workbook is submitted to facilitators only. Other attendees do not see your worksheet.</p>' +
+      '<div class="savebar">' +
+        '<span class="save-state" aria-live="polite"><span class="dot"></span><span class="txt"></span></span>' +
+        '<div class="row">' +
+          '<button type="button" id="save-draft">Save my draft</button>' +
+          (prev ? '<button type="button" data-goex="' + prev.id + '">← ' + esc(prev.title) + '</button>' : '') +
+          (next ? '<button type="button" class="primary" data-goex="' + next.id + '">Next: ' + esc(next.title) + ' →</button>' : '<button type="button" class="primary" data-goex="myplan">See my compiled plan →</button>') +
+        '</div>' +
+      '</div>' +
+      '<div class="inline-confirm" id="save-fallback" hidden><span>Drafts aren’t saving in this browser.</span><button type="button" data-goex="myplan">Copy or download my plan</button></div>';
+
+    initialSaveState();
+    if (!storageOk) $('#save-fallback').hidden = false;
+  }
+
+  function renderMyPlan() {
+    var plan = compilePlan();
+    $('#ex-body').innerHTML =
+      '<div class="ex-head"><p class="eyebrow">Your portable plan</p><h2 id="ex-title" tabindex="-1">My compiled plan</h2>' +
+      '<p class="lede">Built only from what you wrote on this page. Check it before you save or paste it anywhere.</p></div>' +
+      (plan ? '<pre class="plan-out" id="plan-out">' + esc(plan) + '</pre>' : '<div class="panel tint"><p>Your plan will appear here as you fill in the exercises. Start with <a href="#ex1" style="color:var(--accent)">Exercise 1</a>.</p></div>') +
+      '<div class="row">' +
+        '<button type="button" class="primary" id="copy-plan"' + (plan ? '' : ' disabled') + '>Copy my plan</button>' +
+        '<button type="button" id="download-plan" hidden' + (plan ? '' : ' disabled') + '>Download as a text file</button>' +
+        '<button type="button" data-goex="ex5">Test it with the fresh-chat prompt</button>' +
+      '</div>' +
+      '<p class="small muted">Workbook entries are saved to facilitators as you work. A copy you paste into your own notes or download is the one you control. Future AI conversations only know your plan if you paste it in.</p>' +
+      '<div class="savebar"><span class="save-state" aria-live="polite"><span class="dot"></span><span class="txt"></span></span></div>';
+    initialSaveState();
+    if (downloadsApi) { var b = $('#download-plan'); if (b) b.hidden = false; }
+  }
+
+  // ---------- Resources prompts ----------
+  function renderResources() {
+    var html = '';
+    EX.forEach(function (e) {
+      e.prompts.forEach(function (p, i) {
+        html += '<div class="prompt"><div class="row spread"><span class="label">Exercise ' + e.n + ' · ' + esc(e.title) + (e.prompts.length > 1 ? ' · ' + esc(p.label) : '') + '</span>' +
+          '<button type="button" class="primary" data-res-copy="' + e.id + ':' + i + '">Copy prompt</button></div>' +
+          '<p class="prompt-text">' + promptHtml('__none__', p.text.replace(/\{\{[^|}]+\|([^}]+)\}\}/g, '{{__x|$1}}')) + '</p></div>';
+      });
+    });
+    $('#res-prompts').innerHTML = html;
+  }
+
+  // ---------- Connections ----------
+  function renderConn() {
+    $all('[data-conn]').forEach(function (el) { el.value = (state.conn || {})[el.getAttribute('data-conn')] || ''; });
+  }
+
+  // ---------- Routing ----------
+  var VIEWS = ['plan', 'resources', 'connections'];
+  function route(focus) {
+    var h = (location.hash || '').replace('#', '');
+    var view = 'plan';
+    if (VIEWS.indexOf(h) > -1) view = h;
+    if (/^ex[1-5]$/.test(h) || h === 'myplan') { view = 'plan'; current = h; }
+    $all('section[data-view]').forEach(function (s) { s.hidden = s.getAttribute('data-view') !== view; });
+    $all('nav.tabs a').forEach(function (a) { if (a.getAttribute('data-tab') === view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+    if (view === 'plan') { renderRail(); renderExercise(); if (focus) { var t = $('#ex-title'); if (t) t.focus({ preventScroll: true }); } }
+    if (view === 'connections') renderConn();
+    if (focus) window.scrollTo(0, 0);
+  }
+  function go(hash) { if (location.hash === '#' + hash) route(true); else location.hash = hash; }
+
+  // ---------- Events ----------
+  document.addEventListener('input', function (ev) {
+    var t = ev.target;
+    if (t.matches('[data-ex][data-k]')) {
+      var exId = t.getAttribute('data-ex');
+      state.fields[exId][t.getAttribute('data-k')] = t.value;
+      if (state.examples) state.examples[exId] = false;
+      var flag = $('#example-flag'); if (flag) flag.hidden = true;
+      updatePrompts(); refreshStatuses(); scheduleSave(); scheduleFacilitatorSave(exId);
+    } else if (t.matches('[data-accepted]')) {
+      var acceptedExId = t.getAttribute('data-accepted');
+      state.accepted[acceptedExId] = t.value; refreshStatuses(); scheduleSave(); scheduleFacilitatorSave(acceptedExId);
+    } else if (t.matches('[data-help]')) {
+      var helpExId = t.getAttribute('data-help');
+      state.help[helpExId] = t.value; refreshStatuses(); scheduleSave(); scheduleFacilitatorSave(helpExId);
+    } else if (t.matches('[data-conn]')) {
+      state.conn = state.conn || {}; state.conn[t.getAttribute('data-conn')] = t.value; scheduleSave();
+    }
+  });
+
+  function updatePrompts() {
+    var e = exById(current); if (!e) return;
+    e.prompts.forEach(function (p, i) { var el = $('#prompt-' + i); if (el) el.innerHTML = promptHtml(e.id, p.text); });
+  }
+
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('button, a');
+    if (!t) return;
+
+    if (t.hasAttribute('data-go')) { go(t.getAttribute('data-go')); return; }
+    if (t.hasAttribute('data-goex')) { go(t.getAttribute('data-goex')); return; }
+
+    if (t.hasAttribute('data-copy-prompt')) {
+      var e = exById(current); var p = e.prompts[+t.getAttribute('data-copy-prompt')];
+      copyText(fillPrompt(e.id, p.text, false), 'Prompt copied. Paste it into your AI tool.'); return;
+    }
+    if (t.hasAttribute('data-res-copy')) {
+      var bits = t.getAttribute('data-res-copy').split(':'); var ex = exById(bits[0]);
+      var raw = ex.prompts[+bits[1]].text.replace(/\{\{[^|}]+\|([^}]+)\}\}/g, '[$1]');
+      copyText(raw, 'Prompt copied.'); return;
+    }
+
+    if (t.id === 'load-example') {
+      if (hasContent(current) && !(state.examples && state.examples[current])) { $('#example-confirm').hidden = false; }
+      else applyExample();
+      return;
+    }
+    if (t.id === 'example-yes') { applyExample(); return; }
+    if (t.id === 'example-no') { $('#example-confirm').hidden = true; return; }
+
+    if (t.id === 'save-draft') {
+      saveNow();
+      saveToFacilitators(current).then(function (saved) {
+        toast(saved ? 'Workbook saved.' : 'Workbook could not be saved yet.');
+      });
+      return;
+    }
+
+    if (t.id === 'copy-plan') { var plan = compilePlan(); if (plan) copyText(plan, 'Plan copied. Paste it somewhere you control.'); return; }
+    if (t.id === 'download-plan') { downloadPlan(); return; }
+    if (t.hasAttribute('data-bring')) {
+      var which = t.getAttribute('data-bring');
+      state.conn = state.conn || {};
+      if (which === 'goal') {
+        var q = val('ex5', 'question');
+        if (!q) { toast('Add “One question for a real person” in Exercise 5 first.'); return; }
+        state.conn.goal = q;
+      } else if (which === 'intro') {
+        var c = val('ex2', 'contribution');
+        if (!c) { toast('Add your contribution statement in Exercise 2 first.'); return; }
+        state.conn.intro = c;
+      }
+      renderConn(); scheduleSave(); toast('Added. Edit it so it sounds like you.'); return;
+    }
+    if (t.id === 'copy-profile') {
+      var cn = state.conn || {};
+      var txt = [cn.intro && cn.intro.trim(), cn.goal && ('I’d like to learn: ' + cn.goal.trim()), cn.offer && ('I can offer: ' + cn.offer.trim()), cn.company && ('Company: ' + cn.company.trim()), cn.linkedin && ('LinkedIn: ' + cn.linkedin.trim())].filter(Boolean).join('\n');
+      if (!txt) { toast('Write your introduction first.'); return; }
+      copyText(txt, 'Profile text copied.'); return;
+    }
+  });
+
+  function applyExample() {
+    var e = exById(current); if (!e) return;
+    var ex = e.example;
+    e.fields.forEach(function (f) { state.fields[e.id][f.k] = ex[f.k] || ''; });
+    state.examples = state.examples || {}; state.examples[e.id] = true;
+    scheduleSave(); scheduleFacilitatorSave(e.id); renderExercise(); refreshStatuses();
+    toast('Fictional example loaded.');
+  }
+
+  // ---------- Downloads capability ----------
+  var downloadsApi = null;
+  function downloadPlan() {
+    var plan = compilePlan(); if (!plan || !downloadsApi) return;
+    downloadsApi.save({ filename: 'my-career-plan.txt', data: plan }).then(function (r) {
+      if (r && r.status === 'saved') toast('Plan downloaded.');
+    }, function (err) {
+      var code = err && err.code;
+      if (code === 'declined') return;
+      if (code === 'rate_limited') { toast('A download prompt is already open.'); return; }
+      toast('Download isn’t available here. Use Copy my plan instead.');
+      var b = $('#download-plan'); if (b) b.hidden = true; downloadsApi = null;
+    });
+  }
+  if (window.claude && typeof window.claude.use === 'function') {
+    window.claude.use('downloads').then(function (d) {
+      downloadsApi = d || null;
+      if (downloadsApi) { var b = $('#download-plan'); if (b) b.hidden = false; }
+    }, function () { downloadsApi = null; });
+  }
+
+  function restoreFacilitatorEntries() {
+    submissionClient.load().then(function (rows) {
+      rows.forEach(function (row) {
+        var exId = row.exercise_id;
+        var remote = row.payload && row.payload.fields ? row.payload.fields : {};
+        var exercise = exById(exId);
+        if (!exercise) return;
+        exercise.fields.forEach(function (field) {
+          if (!currentValueFor(exId, field.k) && remote[field.k]) state.fields[exId][field.k] = remote[field.k];
+        });
+        if (!(state.accepted[exId] || '').trim() && remote.__accepted) state.accepted[exId] = remote.__accepted;
+        if (!(state.help[exId] || '').trim() && remote.__help) state.help[exId] = remote.__help;
+      });
+      saveNow();
+      renderRail();
+      if ((location.hash || '').match(/^#(?:ex[1-5])$/)) renderExercise();
+      refreshStatuses();
+    }, function () {
+      toast('Facilitator entries are temporarily unavailable. Keep this page open and try again.');
+    });
+  }
+
+  // ---------- Boot ----------
+  renderAgenda();
+  renderResources();
+  renderConn();
+  renderNow();
+  setInterval(renderNow, 60000);
+  window.addEventListener('hashchange', function () { route(true); });
+  route(false);
+  initialSaveState();
+  restoreFacilitatorEntries();
+})();
+</script>
+
+</body></html>

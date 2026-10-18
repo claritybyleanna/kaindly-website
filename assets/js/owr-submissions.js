@@ -33,7 +33,7 @@ export function createOwrSubmissionClient({
     return data.responses ?? [];
   }
 
-  async function submit(exerciseId, fields) {
+  async function save(exerciseId, fields) {
     const data = await request("POST", { exerciseId, fields, notes: "" });
     return data.response;
   }
@@ -43,5 +43,5 @@ export function createOwrSubmissionClient({
     return Boolean(data.withdrawn);
   }
 
-  return { load, participantId, submit, withdraw };
+  return { load, participantId, save, withdraw };
 }

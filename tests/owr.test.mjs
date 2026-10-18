@@ -64,17 +64,66 @@ test("protects OWR with its own scoped PIN session", async () => {
   });
 });
 
-test("publishes the supplied career workbook as a protected OWR page", async () => {
-  const pageUrl = new URL("../OWR/index.html", import.meta.url);
+test("publishes a client hub at OWR and keeps the supplied workbook as a protected working page", async () => {
+  const hubUrl = new URL("../OWR/index.html", import.meta.url);
+  const pageUrl = new URL("../OWR/workbook/index.html", import.meta.url);
   const accessUrl = new URL("../OWR/access/index.html", import.meta.url);
+  assert.equal(existsSync(hubUrl), true);
   assert.equal(existsSync(pageUrl), true);
   assert.equal(existsSync(accessUrl), true);
+
+  const hub = await readFile(hubUrl, "utf8");
+  assert.match(hub, /class="blead-page owr-page"/u);
+  assert.match(hub, /Career Architecture in the AI Era/u);
+  assert.match(hub, /href="\/OWR\/workbook\/"/u);
+  assert.match(hub, /href="#overview"/u);
+  assert.match(hub, /href="#workbook"/u);
+  assert.match(hub, /href="#how-to-use"/u);
+  assert.match(hub, /href="#resources"/u);
 
   const html = await readFile(pageUrl, "utf8");
   assert.match(html, /Career Architecture in the AI Era/u);
   assert.match(html, /data-workbook-id="owr-career-architecture"/u);
   assert.match(html, /data-response-endpoint="\/OWR\/api\/responses"/u);
+  assert.match(html, /Information entered in this workbook is submitted to facilitators only\. Other attendees do not see your worksheet\./u);
   assert.doesNotMatch(html, /Submitting to the facilitator is simulated|Submitted \(simulated\)/u);
+  assert.doesNotMatch(html, /Review and submit to facilitator|id="do-submit"|data-subkey/u);
+  assert.match(html, /scheduleFacilitatorSave\(exId\)/u);
+  assert.match(html, /\n\[hidden\]\s*\{\s*display:\s*none\s*!important;/u);
+  assert.match(html, /section\[data-view\]\[hidden\]\s*\{\s*display:\s*none\s*!important;/u);
+  assert.doesNotMatch(html, /class="time-chip">' \+ e\.time/u);
+  assert.doesNotMatch(html, /Exercise ' \+ e\.n \+ ' of 5 · ' \+ e\.time/u);
+});
+
+test("OWR workbook entries save to the facilitator endpoint without a separate submit action", async () => {
+  const { createOwrSubmissionClient } = await import("../assets/js/owr-submissions.js");
+  const requests = [];
+  const storage = new Map();
+  const client = createOwrSubmissionClient({
+    workbookId: "owr-career-architecture",
+    endpoint: "/OWR/api/responses",
+    storage: {
+      getItem: (key) => storage.get(key) ?? null,
+      setItem: (key, value) => storage.set(key, value),
+    },
+    cryptoApi: { randomUUID: () => participantId },
+    fetchImpl: async (url, options) => {
+      requests.push({ url, options });
+      return { ok: true, json: async () => ({ response: { saved: true } }) };
+    },
+  });
+
+  await client.save("ex1", { experience: "Career strategy leader" });
+
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].url, "/OWR/api/responses");
+  assert.equal(requests[0].options.method, "POST");
+  assert.deepEqual(JSON.parse(requests[0].options.body), {
+    participantId,
+    exerciseId: "ex1",
+    fields: { experience: "Career strategy leader" },
+    notes: "",
+  });
 });
 
 test("routes OWR responses through an authenticated route-owned adapter without adding a function", async () => {
