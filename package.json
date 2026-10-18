@@ -11,10 +11,16 @@
     "build:blead": "node scripts/build-blead.mjs && node scripts/build-blead-prompts.mjs && node scripts/build-blead-facilitator.mjs",
     "migrate:blead": "node --env-file=.env.local scripts/migrate-blead-db.mjs",
     "test": "node --test tests/*.test.mjs",
-    "prototype:blead": "npm run build:blead && node scripts/blead-prototype-server.mjs"
+    "prototype:blead": "npm run build:blead && node scripts/blead-prototype-server.mjs",
+    "build:reports": "node scripts/build-reports.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.2.0",
-    "@vercel/functions": "3.9.3"
+    "@vercel/functions": "3.9.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
   }
 }

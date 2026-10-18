@@ -19,5 +19,7 @@
       "path": "/api/blead-retention",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "buildCommand": "npm run build:reports && node scripts/build-vercel-site.mjs",
+  "outputDirectory": ".vercel-static"
 }
