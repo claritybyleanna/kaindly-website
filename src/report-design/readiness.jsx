@@ -447,7 +447,7 @@ function App() {
         <p className="eyb rv">Figure 9 · Mindset vs. Practice</p>
         <h2 className="h2 rv">One Score Hides Three Profiles.</h2>
         <p className="lead rv">Most respondents' mindset and practice move together. About one in six shows a meaningful gap, and a single readiness score can't see it.</p>
-        <Scatter /><p className="source-note">Interactive design preview: individual point coordinates have not been validated against source data. Published aggregate profiles: 84% aligned, 12% mindset-led, 4% practice-led.</p>
+        <Scatter /><p className="source-note">Illustrative view: individual point coordinates have not been validated against source data. Published aggregate profiles: 84% aligned, 12% mindset-led, 4% practice-led.</p>
       </div>
     <div className="wrap"><Evidence page={11}>Source: AI Readiness Assessment, p. 11. Earlier source edition. Read the full report for context and limitations.</Evidence></div>
     </section>

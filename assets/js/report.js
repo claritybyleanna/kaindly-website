@@ -95,7 +95,7 @@ function initializeReport() {
     shareButton = button;
     const url = `${location.origin}${location.pathname}`;
     const result = await shareSummary(navigator, document.querySelector('h1').textContent, url);
-    document.querySelector('[data-share-status]').textContent = result === 'copied' ? 'Summary link copied. This preview link works on this computer only.' : '';
+    document.querySelector('[data-share-status]').textContent = result === 'copied' ? 'Summary link copied.' : '';
     if (result === 'manual') {
       shareDialog.querySelector('input').value = url;
       shareDialog.showModal();

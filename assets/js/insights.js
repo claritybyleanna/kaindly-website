@@ -118,10 +118,10 @@ function initializeHub() {
       const bundle = capture.mode === 'recommendations';
       document.querySelector('#lead-title').textContent = connect ? 'Let’s talk about your next step.' : bundle ? 'Your evidence, in one place.' : 'Get the full report.';
       document.querySelector('[data-lead-subtitle]').textContent = connect ? 'Tell us a little about what you’re working toward.' : bundle ? 'Get both reports and choose where to start.' : `${REPORTS[capture.report].title} · PDF · 12 pages`;
-      document.querySelector('[data-lead-submit]').textContent = connect ? 'Preview conversation request ↗' : bundle ? 'Get both reports ↓' : 'Download report ↓';
+      document.querySelector('[data-lead-submit]').textContent = connect ? 'View contact options ↗' : bundle ? 'Get both reports ↓' : 'Download report ↓';
       leadRole.value = role; leadGoal.value = goal;
       context.textContent = role && goal ? `Your selections: ${ROLES[role]} · ${GOALS[goal]}. You can adjust these under “Add context”.` : 'Optional context helps us understand your role, organization and priorities.';
-      previewNotice.textContent = 'Preview only. Details are not saved and no email is sent. Use sample details to try this form.';
+      previewNotice.textContent = 'Requests are not being saved yet. You can access the reports, but this form does not send conversation requests or create newsletter subscriptions.';
       form.hidden = false; success.hidden = true; dialog.showModal(); name.focus();
     });
   });
@@ -160,10 +160,13 @@ function initializeHub() {
     clearForm();
     form.hidden = true; success.hidden = false;
     const heading = success.querySelector('h3');
-    heading.textContent = mode === 'connect' ? 'Conversation request previewed.' : mode === 'recommendations' ? 'Your reading list is ready.' : 'Your report is ready.';
-    document.querySelector('[data-success-copy]').textContent = mode === 'connect' ? 'In the live experience, this would go to KAINDLY with the context you chose to share. This preview sent no request and created no subscription.' : 'Your details have been cleared. No email was sent and no subscription was created. Open or download your report below.';
+    heading.textContent = mode === 'connect' ? 'Request not sent.' : mode === 'recommendations' ? 'Your reading list is ready.' : 'Your report is ready.';
+    document.querySelector('[data-success-copy]').textContent = mode === 'connect' ? 'This form is not yet saving conversation requests. Please use the Contact page to get in touch.' : 'Your details have been cleared. No email was sent and no subscription was created. Open or download your report below.';
     const list = document.querySelector('[data-success-reports]');
     list.replaceChildren();
+    if (mode === 'connect') {
+      const contact = document.createElement('a'); contact.className = 'hub-link'; contact.href = '../contact/'; contact.textContent = 'Contact KAINDLY →'; list.append(contact);
+    }
     if (mode !== 'connect') {
       for (const report of mode === 'recommendations' ? Object.values(REPORTS) : [selected]) {
         const item = document.createElement('div'); item.className = 'success-report';
@@ -175,7 +178,7 @@ function initializeHub() {
       if (mode === 'download') list.querySelector('[data-success-download]').click();
     }
     heading.focus();
-    status.textContent = 'Preview complete. Contact details were cleared; nothing was saved or sent.';
+    status.textContent = 'Contact details were cleared. No request was saved or sent.';
   });
   // Guidance stays available to pointer, keyboard and touch users without moving the cards.
   document.querySelectorAll('.case-art').forEach(art => {

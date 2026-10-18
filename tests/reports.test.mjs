@@ -28,7 +28,7 @@ test('report summaries resolve local links, use distinct PDF sources and keep co
     const file = `insights/${slug}/index.html`;
     const html = readFileSync(file, 'utf8');
     assert.match(html, /noindex, nofollow/);
-    assert.match(html, /Preview only\. Details are not saved and no email is sent/);
+    assert.match(html, /Requests are not being saved yet/);
     assert.match(html, /<input type="checkbox" id="marketing-consent" aria-describedby="consent-help">/);
     assert.doesNotMatch(html, /beehiiv|typeform|attribution\.js|<form[^>]*action=/i);
     for (const [, ref] of html.matchAll(/(?:href|src|data-pdf)="([^"]+)"/g)) {
