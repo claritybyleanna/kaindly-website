@@ -42,6 +42,10 @@
     {
       "source": "/McLendon/api/responses",
       "destination": "/api/workbook-responses-mclendon"
+    },
+    {
+      "source": "/OWR/api/responses",
+      "destination": "/api/blead-responses?workbook=owr-career-architecture"
     }
   ],
   "crons": [

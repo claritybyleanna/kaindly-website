@@ -32,12 +32,14 @@ test("registers every current workbook with explicit identity and retention", ()
     "bracco-sales-pack-1",
     "bracco-sales-pack-2",
     "mclendon-working-smarter",
+    "owr-career-architecture",
   ]);
   assert.deepEqual(registrations.map(({ workbook }) => workbook.id), [
     "bracco-session-1",
     "bracco-sales-ai-brain",
     "bracco-sales-chief-of-staff",
     "mclendon-working-smarter",
+    "owr-career-architecture",
   ]);
   assert.ok(registrations.every(({ deleteAfter }) => deleteAfter === "2027-03-01T06:00:00.000Z"));
   assert.ok(Object.isFrozen(registrations));
@@ -78,7 +80,7 @@ test("fresh registry imports remain available at and after retention expiry", as
   for (const offset of [0, 1]) {
     t.mock.timers.setTime(new Date("2027-03-01T06:00:00.000Z").getTime() + offset);
     const registry = await import(`../lib/workbook-registry.js?expiry-regression=${offset}`);
-    assert.equal(registry.listWorkbookRegistrations().length, 4);
+    assert.equal(registry.listWorkbookRegistrations().length, 5);
     assert.equal(registry.getWorkbookRegistration("bracco-leadership-session-1").deleteAfter, "2027-03-01T06:00:00.000Z");
     assert.throws(() => registry.validateWorkbookRegistration(validRegistration({ key: "new", workbookId: "new" })), /future/i);
     assert.throws(() => registry.validateRegistry([validRegistration({ key: "new", workbookId: "new" })]), /future/i);

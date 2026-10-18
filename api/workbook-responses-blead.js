@@ -27,3 +27,7 @@ export function GET(request) {
 export function POST(request) {
   return handlers().POST(request);
 }
+
+export function DELETE(request) {
+  return handlers().DELETE(request);
+}

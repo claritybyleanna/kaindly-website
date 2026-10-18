@@ -32,12 +32,21 @@ import {
   signMclendonSession,
   verifyMclendonSession,
 } from "./lib/mclendon-auth.js";
+import {
+  OWR_COOKIE_NAME,
+  clearOwrSession,
+  sanitizeOwrReturnTo,
+  serializeOwrSession,
+  signOwrSession,
+  verifyOwrSession,
+} from "./lib/owr-auth.js";
 
 const FULL_SITE_ENVIRONMENTS = new Set(["production", "preview", "development"]);
 const BLEAD_SESSION_MS = 8 * 60 * 60 * 1000;
 const BLEAD_FACILITATOR_SESSION_MS = 4 * 60 * 60 * 1000;
 const BSALES_SESSION_MS = 8 * 60 * 60 * 1000;
 const MCLENDON_SESSION_MS = 8 * 60 * 60 * 1000;
+const OWR_SESSION_MS = 8 * 60 * 60 * 1000;
 
 export function isFullSiteEnvironment(value = process.env.VERCEL_TARGET_ENV ?? process.env.VERCEL_ENV) {
   return FULL_SITE_ENVIRONMENTS.has(value);
@@ -221,6 +230,10 @@ export function isProtectedBsalesPath(pathname) {
 
 export function isMclendonEntryPath(pathname) {
   return pathname === "/McLendon" || pathname === "/McLendon/";
+}
+
+export function isProtectedOwrPath(pathname) {
+  return pathname === "/OWR" || pathname.startsWith("/OWR/");
 }
 
 export function isProtectedDashboardPath(pathname) {
@@ -411,6 +424,36 @@ export async function handleBsalesAccess(
   });
 }
 
+export async function handleOwrAccess(
+  request,
+  { password, secret, now = Date.now(), failureDelayMs = 350 } = {},
+) {
+  const url = new URL(request.url);
+  if (!isSameOriginPost(request, url)) {
+    return new Response("Request not accepted.", {
+      status: 403,
+      headers: { "Cache-Control": "no-store", "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
+
+  const formData = await request.formData();
+  const candidate = String(formData.get("password") ?? "");
+  const returnTo = sanitizeOwrReturnTo(String(formData.get("returnTo") ?? ""));
+  if (!(await securePasswordMatch(candidate, password))) {
+    await new Promise((resolve) => setTimeout(resolve, failureDelayMs));
+    const accessUrl = new URL("/OWR/access/", url);
+    accessUrl.searchParams.set("error", "1");
+    accessUrl.searchParams.set("returnTo", returnTo);
+    accessUrl.hash = "access-error-noscript";
+    return redirect(accessUrl);
+  }
+
+  const token = await signOwrSession({ expiresAt: now + OWR_SESSION_MS, secret });
+  return redirect(returnTo, {
+    "Set-Cookie": serializeOwrSession(token, { secure: url.protocol === "https:" }),
+  });
+}
+
 function unavailable(message) {
   return new Response(message, {
     status: 503,
@@ -461,6 +504,33 @@ export default async function maintenanceMiddleware(
     });
     nextResponse.headers.set("Set-Cookie", serializeMclendonSession(signed));
     return nextResponse;
+  }
+
+  if (isProtectedOwrPath(url.pathname)) {
+    const password = process.env.OWR_PASSWORD;
+    const secret = process.env.OWR_SESSION_SECRET;
+    if (!isValidBleadConfiguration(password, secret)) {
+      return unavailable("This workshop workbook is temporarily unavailable.");
+    }
+
+    if (url.pathname === "/OWR/access/" || url.pathname === "/OWR/access") {
+      if (request.method === "POST") return handleOwrAccess(request, { password, secret });
+      const token = readCookie(request.headers.get("cookie"), OWR_COOKIE_NAME);
+      return (await verifyOwrSession(token, secret)) ? redirect("/OWR/") : nextProtected();
+    }
+
+    if (url.pathname === "/OWR/logout/" && isSameOriginPost(request, url)) {
+      return redirect("/OWR/access/", {
+        "Set-Cookie": clearOwrSession({ secure: url.protocol === "https:" }),
+      });
+    }
+
+    const token = readCookie(request.headers.get("cookie"), OWR_COOKIE_NAME);
+    if (await verifyOwrSession(token, secret)) return nextProtected();
+
+    const accessUrl = new URL("/OWR/access/", url);
+    accessUrl.searchParams.set("returnTo", sanitizeOwrReturnTo(url.pathname + url.search));
+    return redirect(accessUrl);
   }
 
   if (isProtectedBsalesPath(url.pathname)) {

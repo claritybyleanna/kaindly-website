@@ -14,6 +14,7 @@ export const PUBLIC_PATHS = Object.freeze([
   "Blead",
   "bsales",
   "McLendon",
+  "OWR",
   "collective",
   "contact",
   "dashboard",

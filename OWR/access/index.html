@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OneWe Reach Workbook Access | KAINDLY</title>
+  <meta name="description" content="Access the protected OneWe Reach Career Architecture workbook.">
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="../../assets/brand/icon-violet.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../../assets/css/site.css">
+  <link rel="stylesheet" href="../../assets/css/blead-access.css">
+  <script type="module" src="../../assets/js/owr-access.js"></script>
+</head>
+<body class="blead-access-page">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <main id="main-content" class="blead-access-shell">
+    <section class="blead-access-card" aria-labelledby="access-title">
+      <img class="blead-access-logo" src="../../assets/brand/logo-secondary-violet.svg" alt="KAINDLY" width="166" height="32">
+      <div class="blead-access-accent" aria-hidden="true"></div>
+      <p class="eyebrow">Protected workshop workbook</p>
+      <h1 id="access-title">Enter the OneWe Reach workbook</h1>
+      <p class="blead-access-intro">Use the workshop PIN provided through your approved participant channel.</p>
+      <form method="post" action="/OWR/access/" data-owr-access-form>
+        <label for="owr-program-password">Workshop PIN</label>
+        <input id="owr-program-password" name="password" type="password" autocomplete="current-password" required>
+        <input name="returnTo" type="hidden" value="/OWR/">
+        <button class="button" type="submit">Open the workbook</button>
+      </form>
+      <p class="access-error" role="alert" aria-live="assertive" hidden data-access-error>That PIN was not accepted. Check it and try again.</p>
+      <noscript><style>#access-error-noscript:not(:target) { display: none; }</style><p class="access-error" id="access-error-noscript">That PIN was not accepted. Check it and try again.</p></noscript>
+      <p class="blead-access-note">This shared PIN is for the OneWe Reach workshop. Do not share it outside the approved participant group.</p>
+    </section>
+  </main>
+</body>
+</html>
