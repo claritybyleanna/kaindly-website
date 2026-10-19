@@ -86,6 +86,7 @@ test("publishes a client hub at OWR and keeps the supplied workbook as a protect
   assert.match(html, /data-workbook-id="owr-career-architecture"/u);
   assert.match(html, /data-response-endpoint="\/OWR\/api\/responses"/u);
   assert.match(html, /Information entered in this workbook is submitted to facilitators only\. Other attendees do not see your worksheet\./u);
+  assert.doesNotMatch(html, /class="notice gutter"|<strong>Facilitator access<\/strong>/u);
   assert.doesNotMatch(html, /Submitting to the facilitator is simulated|Submitted \(simulated\)/u);
   assert.doesNotMatch(html, /Review and submit to facilitator|id="do-submit"|data-subkey/u);
   assert.match(html, /scheduleFacilitatorSave\(exId\)/u);
