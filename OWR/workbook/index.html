@@ -161,8 +161,6 @@ button[disabled] { opacity: 0.5; cursor: not-allowed; }
 .meta-label { font-family: var(--font-sub); font-size: 12px; color: var(--muted); }
 
 .ex-head { display: grid; gap: 12px; }
-.ex-meta { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--font-sub); font-size: 14px; color: var(--muted); }
-.ex-meta b { color: var(--fg); font-weight: 600; }
 .leave { display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
 .leave .tag { background: var(--lime); color: var(--lime-fg); font-family: var(--font-sub); font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; }
 
@@ -399,8 +397,7 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
   // ---------- Content ----------
   var EX = [
     {
-      id: 'ex1', n: 1, title: 'Compare two directions', time: '4:25–4:35', start: '16:25', end: '16:35', mins: 10,
-      split: '2-min demo · 6-min individual work · 2-min checkpoint',
+      id: 'ex1', n: 1, title: 'Compare two directions',
       purpose: 'Name two possibilities worth exploring, not two irreversible decisions. Compare them using what matters to you.',
       output: 'A short two-direction comparison and one provisional choice.',
       fields: [
@@ -426,8 +423,7 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
       }
     },
     {
-      id: 'ex2', n: 2, title: 'Find the meaning behind the goal', time: '4:35–4:43', start: '16:35', end: '16:43', mins: 8,
-      split: '1-min explanation · 5-min AI interview or solo reflection · 2-min review',
+      id: 'ex2', n: 2, title: 'Find the meaning behind the goal',
       purpose: 'Choose one reflection you can’t answer yet. Let AI ask one question at a time. Stop after a few answers and correct its summary.',
       output: 'One statement of the contribution you want to make, approved by you.',
       fields: [
@@ -447,8 +443,7 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
       }
     },
     {
-      id: 'ex3', n: 3, title: 'Build the Impact Ladder', time: '4:43–4:55', start: '16:43', end: '16:55', mins: 12,
-      split: '3-min worked example · 7-min build · 2-min check',
+      id: 'ex3', n: 3, title: 'Build the Impact Ladder',
       purpose: 'Connect a meaningful future change to evidence and actions. Start with one item at each level.',
       output: 'Four connected, editable sentences.',
       fields: [
@@ -468,8 +463,7 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
       }
     },
     {
-      id: 'ex4', n: 4, title: 'Test the weakest assumption', time: '4:55–5:05', start: '16:55', end: '17:05', mins: 10,
-      split: '2-min demo · 6-min work · 2-min checkpoint',
+      id: 'ex4', n: 4, title: 'Test the weakest assumption',
       purpose: 'Find what you’re assuming, then design a small way to learn more before committing.',
       output: 'One assumption, one bounded experiment and a useful conversation target.',
       fields: [
@@ -493,8 +487,7 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
       }
     },
     {
-      id: 'ex5', n: 5, title: 'Save and test the plan', time: '5:05–5:15', start: '17:05', end: '17:15', mins: 10,
-      split: '2-min explanation · 4-min compile, review and save · 3-min fresh-chat test · 1-min bridge',
+      id: 'ex5', n: 5, title: 'Save and test the plan',
       purpose: 'Keep only what you’ve accepted. Save a copy you control, then test whether a new conversation can use it without remembering earlier work.',
       output: 'A reviewed portable plan plus one actionable next step.',
       fields: [
@@ -804,7 +797,6 @@ import { createOwrSubmissionClient } from "/assets/js/owr-submissions.js";
         '<h2 id="ex-title" tabindex="-1">' + esc(e.title) + '</h2>' +
         '<p class="lede">' + esc(e.purpose) + '</p>' +
         '<div class="leave"><span class="tag">You will leave with</span><span>' + esc(e.output) + '</span></div>' +
-        '<div class="ex-meta"><span><b>In the room:</b> ' + esc(e.split) + '</span></div>' +
       '</div>' +
       '<div class="panel">' +
         '<div class="row spread"><h3>Fill in</h3><button type="button" class="quiet" id="load-example">Show fictional example</button></div>' +

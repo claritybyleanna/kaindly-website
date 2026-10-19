@@ -94,6 +94,7 @@ test("publishes a client hub at OWR and keeps the supplied workbook as a protect
   assert.match(html, /section\[data-view\]\[hidden\]\s*\{\s*display:\s*none\s*!important;/u);
   assert.doesNotMatch(html, /class="time-chip">' \+ e\.time/u);
   assert.doesNotMatch(html, /Exercise ' \+ e\.n \+ ' of 5 · ' \+ e\.time/u);
+  assert.doesNotMatch(html, /<b>In the room:<\/b>|\bsplit:\s*['"]|2-min demo · 6-min individual work · 2-min checkpoint/u);
 });
 
 test("OWR workbook entries save to the facilitator endpoint without a separate submit action", async () => {
