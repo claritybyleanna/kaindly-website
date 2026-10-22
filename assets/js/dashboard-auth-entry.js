@@ -2,7 +2,18 @@ export const EMAIL_CODE_CONFIRMATION = "If that address can access this dashboar
 const CODE_INVALID = "That code didn’t work. Check the six digits and try again.";
 const AUTH_UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again shortly.";
 
+export async function renewExpiredDashboardSession(clerk, now = Date.now()) {
+  const session = clerk.session;
+  const createdAt = session?.createdAt instanceof Date ? session.createdAt.getTime() : Number(session?.createdAt);
+  if (session?.id && Number.isFinite(createdAt) && now - createdAt >= 4 * 60 * 60 * 1000) {
+    // Re-authenticate this browser under the existing four-hour server policy.
+    // The callback prevents navigation before the new sign-in request begins.
+    await clerk.signOut(async () => {}, { sessionId: session.id });
+  }
+}
+
 export async function requestDashboardEmailCode({ clerk, identifier }) {
+  await renewExpiredDashboardSession(clerk);
   const signInAttempt = await clerk.client.signIn.create({ identifier });
   const emailCodeFactor = signInAttempt.supportedFirstFactors?.find(
     (factor) => factor.strategy === "email_code" && typeof factor.emailAddressId === "string",
@@ -20,6 +31,7 @@ export async function verifyDashboardEmailCode({
   signInAttempt,
   code,
   redirectTo = (url) => window.location.assign(url),
+  returnTo = "/dashboard/",
 }) {
   const normalizedCode = String(code ?? "").trim();
   if (!signInAttempt || !/^\d{6}$/u.test(normalizedCode)) {
@@ -33,7 +45,7 @@ export async function verifyDashboardEmailCode({
     throw new Error("Email-code sign-in is incomplete");
   }
   await clerk.setActive({ session: result.createdSessionId });
-  redirectTo("/dashboard/");
+  redirectTo(/^\/dashboard\/(?:[a-z0-9-]+\/)*$/iu.test(returnTo) ? returnTo : "/dashboard/");
   return result;
 }
 
@@ -74,6 +86,13 @@ export async function initializeDashboardAuth({
   });
   if (!response.ok) throw new Error("Authentication configuration unavailable");
   const configuration = await response.json();
+  if (configuration?.mode === "passphrase") {
+    documentRef.querySelector("[data-dashboard-sign-out]")?.addEventListener("click", async () => {
+      const response = await fetchImpl("/dashboard/logout/", { method: "POST", credentials: "same-origin" });
+      if (response.ok) locationRef.assign("/dashboard/access/");
+    });
+    return null;
+  }
   if (typeof configuration?.publishableKey !== "string") {
     throw new Error("Authentication configuration unavailable");
   }
@@ -95,6 +114,7 @@ export async function initializeDashboardAuth({
   let identifier = "";
 
   if (form && email && codeForm && code && status && button && codeButton) {
+    button.disabled = false;
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       identifier = email.value;
@@ -118,6 +138,7 @@ export async function initializeDashboardAuth({
           clerk,
           signInAttempt,
           code: code.value,
+          returnTo: new URLSearchParams(locationRef.search ?? "").get("returnTo") ?? "/dashboard/",
           redirectTo: (url) => locationRef.assign(url),
         });
       } catch {

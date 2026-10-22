@@ -39,7 +39,7 @@ test("builds deterministic branded private pages with one primary heading", asyn
     assert.match(first, /<meta name="robots" content="noindex, nofollow">/u);
     assert.match(first, /(?:alt|aria-label)="KAINDLY/u);
     assert.match(first, /\/assets\/css\/dashboard\.css/u);
-    assert.match(first, /\/assets\/js\/dashboard-auth\.js/u);
+    assert.match(first, name === "access" ? /\/assets\/js\/dashboard-passphrase\.js/u : /\/assets\/js\/dashboard-auth\.js/u);
   }
 });
 
@@ -48,16 +48,12 @@ test("generated authentication bundle is free of trailing build whitespace", asy
   assert.doesNotMatch(bundle, /[ \t]+$/mu);
 });
 
-test("dashboard access uses a six-digit email PIN without magic-link copy", () => {
+test("dashboard access submits a private passphrase to the server", () => {
   const access = renderDashboardAccess();
-  const verification = renderDashboardVerification();
-
-  assert.match(access, /data-dashboard-auth-code/u);
-  assert.match(access, /autocomplete="one-time-code"/u);
-  assert.match(access, /inputmode="numeric"/u);
-  assert.match(access, /pattern="\[0-9\]\{6\}"/u);
-  assert.match(access, /six-digit/u);
-  assert.doesNotMatch(`${access}\n${verification}`, /magic link|sign-in link|secure link/iu);
+  assert.match(access, /method="post" action="\/dashboard\/access\/"/u);
+  assert.match(access, /type="password" name="passphrase"/u);
+  assert.match(access, /autocomplete="current-password"/u);
+  assert.doesNotMatch(access, /one-time-code|six-digit|data-dashboard-auth-code/u);
 });
 
 test("dashboard shell exposes the complete facilitator workflow", () => {

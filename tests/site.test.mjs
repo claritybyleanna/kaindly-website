@@ -315,9 +315,14 @@ test("Home groups FAAI stages and leaves card categories as visible text", () =>
   for (const category of categories) assert.doesNotMatch(category, /\saria-label=/);
 });
 
-test("every page initializes the Beehiiv newsletter exactly once", () => {
+test("existing pages retain Beehiiv while the Insights preview uses simulated capture", () => {
   for (const [file] of pageFiles) {
     const html = readFileSync(file, "utf8");
+    if (file === "insights/index.html") {
+      assert.doesNotMatch(html, /subscribe-forms\.beehiiv\.com|newsletter-fab/);
+      assert.match(html, /href="https:\/\/kaindly\.beehiiv\.com\/"/);
+      continue;
+    }
     assert.equal((html.match(/data-beehiiv-form="7f631179-635f-49de-8c8f-063918eadc8c"/g) || []).length, 1, `${file} needs one Beehiiv form`);
     assert.equal((html.match(/https:\/\/subscribe-forms\.beehiiv\.com\/v3\/loader\.js/g) || []).length, 1, `${file} needs one Beehiiv loader`);
     assert.equal((html.match(/https:\/\/subscribe-forms\.beehiiv\.com\/attribution\.js/g) || []).length, 1, `${file} needs one Beehiiv attribution script`);
@@ -362,22 +367,18 @@ test("Insights filtering matches complete category tokens", async () => {
   assert.equal(insightMatches("ai-news", "ai"), false);
 });
 
-test("Insights presents curated previews and links the published Standards article", () => {
-  assert.equal(existsSync("insights/index.html"), true, "Insights page is missing");
+test("Insights is a guided case-study hub with a separate Beehiiv publication link", () => {
   const html = readFileSync("insights/index.html", "utf8");
-
   assert.match(html, /<title>KAINDLY \| Insights<\/title>/);
   assert.match(html, /<link rel="canonical" href="https:\/\/www\.kaindly\.ai\/insights\/">/);
   assert.match(html, /href="\.\.\/insights\/index\.html"[^>]+aria-current="page"/);
-  assert.equal((html.match(/data-filter="/g) || []).length, 6);
-  assert.equal((html.match(/data-insight-card/g) || []).length, 3);
-  assert.match(html, /data-filter="all"[^>]+aria-pressed="true"/);
-  assert.match(html, /Exclusion and Inequity Has a New Face in the World of AI/);
-  assert.match(html, /Your Company Won't Save You from the AI Revolution/);
-  assert.match(html, /KAINDLY Standards/);
-  assert.match(html, /href="exclusion-inequity-ai\/"/);
-  assert.match(html, /href="kaindly-standards\/"/);
-  assert.match(html, /Read Article/);
+  assert.equal((html.match(/data-case-study=/g) || []).length, 2);
+  assert.match(html, /data-finder-step="role"/);
+  assert.match(html, /data-finder-step="goal"/);
+  assert.match(html, /href="ai-readiness-assessment\/"/);
+  assert.match(html, /href="the-fluency-advantage\/"/);
+  assert.match(html, /href="https:\/\/kaindly\.beehiiv\.com\/"/);
+  assert.doesNotMatch(html, /href="(?:exclusion-inequity-ai|take-charge-of-your-ai-future|kaindly-standards)\/"/);
   assert.doesNotMatch(html, /image-slot|text\/babel|TODO|TBD/i);
 });
 
@@ -404,21 +405,21 @@ test("KAINDLY Standards publishes the corrected article verbatim", () => {
   assert.doesNotMatch(visibleText, /We lead AI\. We don.t chase it\./i);
 });
 
-test("the Exclusion and Inequity article is published from Insights", () => {
+test("the existing Exclusion and Inequity article remains available", () => {
   const index = readFileSync("insights/index.html", "utf8");
   const article = readFileSync("insights/exclusion-inequity-ai/index.html", "utf8");
-  assert.match(index, /href="exclusion-inequity-ai\/"/);
+  assert.doesNotMatch(index, /href="exclusion-inequity-ai\/"/);
   assert.match(article, /Exclusion and Inequity Has a New Face in the World of AI/i);
   assert.match(article.replace(/<[^>]+>/g, " ").replace(/\s+/g, " "), /What we're facing isn't a skill gap\. It's an access gap\./);
 });
 
-test("the Take Charge of Your AI Future article is published from Insights", () => {
+test("the existing Take Charge article remains available outside the case-study hub", () => {
   const insights = readFileSync("insights/index.html", "utf8");
   const articlePath = "insights/take-charge-of-your-ai-future/index.html";
 
   assert.equal(existsSync(articlePath), true, "Take Charge article page is missing");
-  assert.match(insights, /href="take-charge-of-your-ai-future\/"/);
-  assert.match(insights, /3 insights shown/);
+  assert.doesNotMatch(insights, /href="take-charge-of-your-ai-future\/"/);
+  assert.equal((insights.match(/<article class="case-card" data-case-study=/g) || []).length, 2);
 
   const article = readFileSync(articlePath, "utf8");
   assert.match(article, /<h1>Your Company Won(?:'|’|&rsquo;)t Save You from the AI Revolution/);

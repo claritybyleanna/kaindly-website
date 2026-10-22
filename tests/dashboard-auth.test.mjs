@@ -490,3 +490,11 @@ test("default middleware fails closed for protected dashboard HTML and does not 
     }
   }
 });
+
+test("requesting a code renews only an expired current-browser session first", async () => {
+  const {renewExpiredDashboardSession,requestDashboardEmailCode}=await import("../assets/js/dashboard-auth-entry.js");
+  const calls=[];const clerk={session:{id:"expired_current_browser",createdAt:new Date(Date.now()-5*60*60*1000)},signOut:async(callback,options)=>{calls.push(["signOut",options]);await callback();clerk.session=null;},client:{signIn:{create:async()=>{assert.equal(clerk.session,null);calls.push(["create"]);return{supportedFirstFactors:[{strategy:"email_code",emailAddressId:"owner_email"}],prepareFirstFactor:async()=>calls.push(["prepare"])};}}}};
+  await requestDashboardEmailCode({clerk,identifier:"owner@example.com"});
+  assert.deepEqual(calls,[["signOut",{sessionId:"expired_current_browser"}],["create"],["prepare"]]);
+  const fresh={session:{id:"fresh",createdAt:new Date()},signOut:async()=>{throw Error("fresh session must not be ended")}};await renewExpiredDashboardSession(fresh);
+});

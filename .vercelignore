@@ -1,0 +1,17 @@
+.git
+node_modules
+.vercel-static
+.env*
+tests
+docs
+README.md
+AGENTS.md
+.agents
+.codex
+.superpowers
+Headshots
+Kaindly-LogoKit-2026
+Kaindly website redesign
+Kaindly website redesign.zip
+tmp
+skills-lock.json

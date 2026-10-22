@@ -1,3 +1,4 @@
+import { handlePassphraseLogin, handlePassphraseLogout } from "./lib/dashboard-passphrase.js";
 import { next } from "@vercel/functions";
 import { authorizeDashboardRequest } from "./lib/dashboard-auth.js";
 import {
@@ -250,7 +251,9 @@ export function isDashboardPublicPath(pathname) {
 }
 
 export function isDashboardFunctionPath(pathname) {
-  return pathname === "/dashboard/api/responses"
+  return pathname === "/dashboard/api/owr-help"
+    || pathname === "/dashboard/api/owr-help/"
+    || pathname === "/dashboard/api/responses"
     || pathname === "/dashboard/api/responses/"
     || pathname === "/dashboard/api/export.csv"
     || pathname === "/dashboard/api/export.csv/";
@@ -479,6 +482,8 @@ export default async function maintenanceMiddleware(
   ) {
     return permanentRedirect("/dashboard/");
   }
+  if (url.pathname === "/dashboard/logout/" && request.method === "POST") return handlePassphraseLogout(request);
+  if (url.pathname === "/dashboard/access/" && request.method === "POST") return handlePassphraseLogin(request);
   if (isProtectedDashboardPath(url.pathname)) {
     return handleDashboardRoute(request);
   }

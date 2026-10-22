@@ -34,6 +34,7 @@ export function groupDashboardResponses(responses = []) {
         client: response.client,
         program: response.program,
         participantId,
+        contact: response.contact,
         latestActivity: response.updatedAt,
         responses: [],
       });
@@ -215,13 +216,14 @@ export function renderDashboardResponses(documentRef, root, responses = []) {
   const cards = groupDashboardResponses(responses).map((group) => {
     const card = element(documentRef, "article", "dashboard-participant-card");
     const header = element(documentRef, "header", "dashboard-participant-card__header");
-    const id = element(documentRef, "h3", "", `Participant ${group.participantId.slice(0, 8)}`);
+    const id = element(documentRef, "h3", "", group.contact?.name || `Participant ${group.participantId.slice(0, 8)}`);
     id.append(element(documentRef, "span", "visually-hidden", ` Full anonymous participant ID: ${group.participantId}`));
     header.append(
       id,
       element(documentRef, "p", "", `${group.workbook.name} · ${group.client.name}`),
       element(documentRef, "p", "dashboard-participant-meta", `${group.responses.length} response${group.responses.length === 1 ? "" : "s"} · Latest ${formatDate(group.latestActivity)}`),
     );
+    if (group.contact?.email) header.append(element(documentRef, "p", "dashboard-participant-meta", group.contact.email + " · Workshop support contact"));
     card.append(header, ...group.responses.map((response) => renderResponse(documentRef, response)));
     return card;
   });

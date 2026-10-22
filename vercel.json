@@ -46,6 +46,18 @@
     {
       "source": "/OWR/api/responses",
       "destination": "/api/blead-responses?workbook=owr-career-architecture"
+    },
+    {
+      "source": "/OWR/next-move/api/responses",
+      "destination": "/api/blead-responses?workbook=owr-purposeful-next-move"
+    },
+    {
+      "source": "/dashboard/api/owr-help",
+      "destination": "/api/dashboard-responses?view=owr-help"
+    },
+    {
+      "source": "/OWR/next-move/api/connections",
+      "destination": "/api/blead-responses?workbook=owr-connections-2026-10-20"
     }
   ],
   "crons": [

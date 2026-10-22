@@ -13,7 +13,7 @@ var __export = (target, all) => {
     __defProp(target, name, { get: all[name], enumerable: true });
 };
 
-// node_modules/@clerk/clerk-js/dist/clerk.mjs
+// ../../../Users/leanna/Documents/Kaindly Site/node_modules/@clerk/clerk-js/dist/clerk.mjs
 var clerk_exports = {};
 __export(clerk_exports, {
   Clerk: () => s,
@@ -37,7 +37,7 @@ function n(e2) {
 }
 var e, t, a, r, i, s, o, l, c, u, d, h, m, p, f, g, b;
 var init_clerk = __esm({
-  "node_modules/@clerk/clerk-js/dist/clerk.mjs"() {
+  "../../../Users/leanna/Documents/Kaindly Site/node_modules/@clerk/clerk-js/dist/clerk.mjs"() {
     a = { 9296(e2, t2, a2) {
       a2.d(t2, { getDebugLogger: () => l2 }), a2(6100);
       class r2 {
@@ -21662,7 +21662,16 @@ API Error: ${n11}`, { data: t12, status: e12 });
 var EMAIL_CODE_CONFIRMATION = "If that address can access this dashboard, a six-digit code is on its way.";
 var CODE_INVALID = "That code didn\u2019t work. Check the six digits and try again.";
 var AUTH_UNAVAILABLE = "Sign-in is temporarily unavailable. Please try again shortly.";
+async function renewExpiredDashboardSession(clerk, now = Date.now()) {
+  const session = clerk.session;
+  const createdAt = session?.createdAt instanceof Date ? session.createdAt.getTime() : Number(session?.createdAt);
+  if (session?.id && Number.isFinite(createdAt) && now - createdAt >= 4 * 60 * 60 * 1e3) {
+    await clerk.signOut(async () => {
+    }, { sessionId: session.id });
+  }
+}
 async function requestDashboardEmailCode({ clerk, identifier }) {
+  await renewExpiredDashboardSession(clerk);
   const signInAttempt = await clerk.client.signIn.create({ identifier });
   const emailCodeFactor = signInAttempt.supportedFirstFactors?.find(
     (factor) => factor.strategy === "email_code" && typeof factor.emailAddressId === "string"
@@ -21678,7 +21687,8 @@ async function verifyDashboardEmailCode({
   clerk,
   signInAttempt,
   code,
-  redirectTo = (url) => window.location.assign(url)
+  redirectTo = (url) => window.location.assign(url),
+  returnTo = "/dashboard/"
 }) {
   const normalizedCode = String(code ?? "").trim();
   if (!signInAttempt || !/^\d{6}$/u.test(normalizedCode)) {
@@ -21692,7 +21702,7 @@ async function verifyDashboardEmailCode({
     throw new Error("Email-code sign-in is incomplete");
   }
   await clerk.setActive({ session: result.createdSessionId });
-  redirectTo("/dashboard/");
+  redirectTo(/^\/dashboard\/(?:[a-z0-9-]+\/)*$/iu.test(returnTo) ? returnTo : "/dashboard/");
   return result;
 }
 async function submitDashboardEmailCodeRequest({
@@ -21728,6 +21738,13 @@ async function initializeDashboardAuth({
   });
   if (!response.ok) throw new Error("Authentication configuration unavailable");
   const configuration = await response.json();
+  if (configuration?.mode === "passphrase") {
+    documentRef.querySelector("[data-dashboard-sign-out]")?.addEventListener("click", async () => {
+      const response2 = await fetchImpl("/dashboard/logout/", { method: "POST", credentials: "same-origin" });
+      if (response2.ok) locationRef.assign("/dashboard/access/");
+    });
+    return null;
+  }
   if (typeof configuration?.publishableKey !== "string") {
     throw new Error("Authentication configuration unavailable");
   }
@@ -21746,6 +21763,7 @@ async function initializeDashboardAuth({
   let signInAttempt = null;
   let identifier = "";
   if (form && email && codeForm && code && status && button && codeButton) {
+    button.disabled = false;
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       identifier = email.value;
@@ -21768,6 +21786,7 @@ async function initializeDashboardAuth({
           clerk,
           signInAttempt,
           code: code.value,
+          returnTo: new URLSearchParams(locationRef.search ?? "").get("returnTo") ?? "/dashboard/",
           redirectTo: (url) => locationRef.assign(url)
         });
       } catch {
@@ -21812,6 +21831,7 @@ if (typeof window !== "undefined" && typeof document !== "undefined") {
 export {
   EMAIL_CODE_CONFIRMATION,
   initializeDashboardAuth,
+  renewExpiredDashboardSession,
   requestDashboardEmailCode,
   submitDashboardEmailCodeRequest,
   verifyDashboardEmailCode

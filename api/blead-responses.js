@@ -1,3 +1,6 @@
+import {createLiveConnectionsHandler,EVENT} from '../lib/owr-connections-live.js';
+import { createNextMoveStore } from "../lib/owr-next-move-store.js";
+import { createNextMoveHandlers } from "../lib/owr-next-move-api.js";
 import { readCookie } from "../lib/blead-auth.js";
 import {
   OWR_COOKIE_NAME,
@@ -13,10 +16,10 @@ import {
   POST as postBleadResponse,
 } from "./workbook-responses-blead.js";
 
-const OWR_WORKBOOK = "owr-career-architecture";
+const OWR_WORKBOOKS = new Set(["owr-career-architecture", "owr-purposeful-next-move"]);
 
 function isOwrRequest(request) {
-  return new URL(request.url).searchParams.get("workbook") === OWR_WORKBOOK;
+  return OWR_WORKBOOKS.has(new URL(request.url).searchParams.get("workbook"));
 }
 
 async function authorizeOwr(request) {
@@ -24,20 +27,29 @@ async function authorizeOwr(request) {
   return verifyOwrSession(token, process.env.OWR_SESSION_SECRET);
 }
 
-function owrHandlers() {
-  const registration = getWorkbookRegistration(OWR_WORKBOOK);
+function owrHandlers(request) {
+  const registration = getWorkbookRegistration(new URL(request.url).searchParams.get("workbook"));
   const store = createWorkbookResponseStore((text, values) => getWorkbookQuery()(text, values));
   return createParticipantResponseHandlers({ registration, authorize: authorizeOwr, store });
 }
 
+function nextMove(request) { return createNextMoveHandlers({store:createNextMoveStore((text,values)=>getWorkbookQuery()(text,values))})(request); }
+function isNextMove(request) { return new URL(request.url).searchParams.get("workbook") === "owr-purposeful-next-move"; }
+
 export function GET(request) {
-  return isOwrRequest(request) ? owrHandlers().GET(request) : getBleadResponses(request);
+  if(new URL(request.url).searchParams.get('workbook')===EVENT)return createLiveConnectionsHandler({query:(text,values)=>getWorkbookQuery()(text,values)})(request);
+  if (isNextMove(request)) return nextMove(request);
+  return isOwrRequest(request) ? owrHandlers(request).GET(request) : getBleadResponses(request);
 }
 
 export function POST(request) {
-  return isOwrRequest(request) ? owrHandlers().POST(request) : postBleadResponse(request);
+  if(new URL(request.url).searchParams.get('workbook')===EVENT)return createLiveConnectionsHandler({query:(text,values)=>getWorkbookQuery()(text,values)})(request);
+  if (isNextMove(request)) return nextMove(request);
+  return isOwrRequest(request) ? owrHandlers(request).POST(request) : postBleadResponse(request);
 }
 
 export function DELETE(request) {
-  return isOwrRequest(request) ? owrHandlers().DELETE(request) : deleteBleadResponse(request);
+  if(new URL(request.url).searchParams.get('workbook')===EVENT)return createLiveConnectionsHandler({query:(text,values)=>getWorkbookQuery()(text,values)})(request);
+  if (isNextMove(request)) return nextMove(request);
+  return isOwrRequest(request) ? owrHandlers(request).DELETE(request) : deleteBleadResponse(request);
 }

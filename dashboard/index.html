@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Facilitator Dashboard | KAINDLY</title>
-  <meta name="description" content="Private review of anonymous KAINDLY client workbook responses.">
+  <meta name="description" content="Private review of KAINDLY client workbook responses.">
   <meta name="robots" content="noindex, nofollow">
   <link rel="icon" href="/assets/brand/icon-violet.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/assets/css/site.css">
@@ -23,7 +23,7 @@
       <div class="dashboard-shell">
         <p class="dashboard-eyebrow">KAINDLY · FACILITATOR WORKSPACE</p>
         <h1>Client response dashboard</h1>
-        <p>Review anonymous workbook responses across KAINDLY client programs.</p>
+        <p>Review saved workbook responses across KAINDLY client programs. OneWe Reach workshop contacts appear with their submissions.</p>
       </div>
     </section>
     <section class="dashboard-section dashboard-overview" aria-labelledby="overview-title">
@@ -41,7 +41,7 @@
     <section class="dashboard-section dashboard-response-review" aria-labelledby="responses-title">
       <div class="dashboard-shell">
         <div class="dashboard-section-heading dashboard-section-heading--actions">
-          <div><p class="dashboard-kicker">Response review</p><h2 id="responses-title">Anonymous workbook responses</h2></div>
+          <div><p class="dashboard-kicker">Response review</p><h2 id="responses-title">Saved workbook responses</h2></div>
           <a class="dashboard-button dashboard-button--primary" href="/dashboard/api/export.csv" data-dashboard-export>Export filtered CSV</a>
         </div>
         <form class="dashboard-filters" data-dashboard-filters>
@@ -57,7 +57,7 @@
         </form>
         <p class="dashboard-state" data-dashboard-loading role="status" aria-live="polite">Loading responses…</p>
         <p class="dashboard-state" data-dashboard-empty role="status" aria-live="polite" hidden>No responses match these filters.</p>
-        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized role="alert" aria-live="assertive" hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Request a new six-digit code</a> to continue.</p></div>
+        <div class="dashboard-state dashboard-state--alert" data-dashboard-unauthorized role="alert" aria-live="assertive" hidden><h3>Your dashboard session has ended.</h3><p><a href="/dashboard/access/">Sign in again</a> to continue.</p></div>
         <div class="dashboard-state dashboard-state--alert" data-dashboard-unavailable role="alert" aria-live="assertive" hidden><h3>The dashboard is temporarily unavailable.</h3><p>Please try again shortly.</p><button class="dashboard-button dashboard-button--secondary" type="button" data-dashboard-retry>Try again</button></div>
         <div class="dashboard-responses" data-dashboard-responses aria-live="polite"></div>
       </div>
