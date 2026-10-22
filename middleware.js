@@ -475,7 +475,7 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
-  if (url.pathname === "/owref2026" || url.pathname === "/owref2026/") {
+  if (url.pathname === "/owref2026" || url.pathname === "/owref2026/" || url.pathname === "/owref2026/index.html") {
     return handleExecutiveAlpha(request);
   }
   if (

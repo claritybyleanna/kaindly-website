@@ -42,11 +42,18 @@ test('correct password unlocks exact authored source and session survives reload
 test('native middleware intercepts both printed URL variants without changing public home', async()=>{
   process.env.VERCEL_ENV='production';
   const middleware=(await import('../middleware.js')).default;
-  for(const path of ['/owref2026','/owref2026/']) {
+  for(const path of ['/owref2026','/owref2026/','/owref2026/index.html']) {
     const res=await middleware(new Request('https://www.kaindly.ai'+path));
     assert.equal(res.status,503);
     assert.equal(await res.text(),'Workshop access is temporarily unavailable.');
   }
   const home=await middleware(new Request('https://www.kaindly.ai/'));
   assert.equal(home.headers.get('x-middleware-next'),'1');
+});
+
+test('protected index entry keeps password posts and redirects on the native entry',async()=>{
+  const req=new Request('https://www.kaindly.ai/owref2026/index.html');
+  assert.match(await (await handle(req)).text(),/action="\/owref2026\/index.html"/);
+  const post=new Request(req.url,{method:'POST',headers:{origin:'https://www.kaindly.ai','content-type':'application/x-www-form-urlencoded'},body:'password=test-only-password'});
+  assert.equal((await handle(post)).headers.get('location'),'/owref2026/index.html');
 });
