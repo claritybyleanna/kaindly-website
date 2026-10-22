@@ -1,5 +1,6 @@
 import { handlePassphraseLogin, handlePassphraseLogout } from "./lib/dashboard-passphrase.js";
 import { next } from "@vercel/functions";
+import { handleExecutiveAlpha } from "./lib/owref2026.js";
 import { authorizeDashboardRequest } from "./lib/dashboard-auth.js";
 import {
   BLEAD_COOKIE_NAME,
@@ -474,6 +475,9 @@ export default async function maintenanceMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
+  if (url.pathname === "/owref2026" || url.pathname === "/owref2026/") {
+    return handleExecutiveAlpha(request);
+  }
   if (
     url.pathname === "/Blead/facilitator"
     || url.pathname === "/Blead/facilitator/"
