@@ -28,6 +28,11 @@ test("registers every current workbook with explicit identity and retention", ()
   const registrations = listWorkbookRegistrations();
 
   assert.deepEqual(registrations.map(({ key }) => key), [
+    "session-executive-alpha",
+    "session-owr-career-architecture",
+    "session-bracco-leadership",
+    "session-bracco-sales",
+    "session-mclendon",
     "owr-purposeful-next-move",
     "bracco-leadership-session-1",
     "bracco-sales-pack-1",
@@ -36,6 +41,11 @@ test("registers every current workbook with explicit identity and retention", ()
     "owr-career-architecture",
   ]);
   assert.deepEqual(registrations.map(({ workbook }) => workbook.id), [
+    "session-executive-alpha",
+    "session-owr-career-architecture",
+    "session-bracco-leadership",
+    "session-bracco-sales",
+    "session-mclendon",
     "owr-purposeful-next-move",
     "bracco-session-1",
     "bracco-sales-ai-brain",
@@ -82,7 +92,7 @@ test("fresh registry imports remain available at and after retention expiry", as
   for (const offset of [0, 1]) {
     t.mock.timers.setTime(new Date("2027-03-01T06:00:00.000Z").getTime() + offset);
     const registry = await import(`../lib/workbook-registry.js?expiry-regression=${offset}`);
-    assert.equal(registry.listWorkbookRegistrations().length, 6);
+    assert.equal(registry.listWorkbookRegistrations().length, 11);
     assert.equal(registry.getWorkbookRegistration("bracco-leadership-session-1").deleteAfter, "2027-03-01T06:00:00.000Z");
     assert.throws(() => registry.validateWorkbookRegistration(validRegistration({ key: "new", workbookId: "new" })), /future/i);
     assert.throws(() => registry.validateRegistry([validRegistration({ key: "new", workbookId: "new" })]), /future/i);

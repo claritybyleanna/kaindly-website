@@ -1,3 +1,4 @@
+import {createSessionCaptureGate} from "./lib/session-capture.js";
 import { handlePassphraseLogin, handlePassphraseLogout } from "./lib/dashboard-passphrase.js";
 import { next } from "@vercel/functions";
 import { handleExecutiveAlpha } from "./lib/owref2026.js";
@@ -231,7 +232,7 @@ export function isProtectedBsalesPath(pathname) {
 }
 
 export function isMclendonEntryPath(pathname) {
-  return pathname === "/McLendon" || pathname === "/McLendon/";
+  return pathname === "/McLendon" || pathname === "/McLendon/" || pathname === "/McLendon/index.html";
 }
 
 export function isProtectedOwrPath(pathname) {
@@ -469,7 +470,7 @@ function unavailable(message) {
   });
 }
 
-export default async function maintenanceMiddleware(
+async function existingMiddleware(
   request = new Request("https://www.kaindly.ai/"),
 ) {
   if (!isFullSiteEnvironment()) return maintenanceResponse();
@@ -637,4 +638,11 @@ export default async function maintenanceMiddleware(
   const accessUrl = new URL("/Blead/access/", url);
   accessUrl.searchParams.set("returnTo", url.pathname + url.search);
   return redirect(accessUrl);
+}
+
+const captureGate=createSessionCaptureGate();
+export default async function maintenanceMiddleware(request=new Request("https://www.kaindly.ai/")) {
+  if (!isFullSiteEnvironment()) return existingMiddleware(request);
+  const capture=await captureGate(request);
+  return capture || existingMiddleware(request);
 }

@@ -102,6 +102,7 @@ ${documentHead({
           <label class="dashboard-filter"><span>From date</span><input type="date" name="from" data-dashboard-filter="from"></label>
           <label class="dashboard-filter"><span>To date</span><input type="date" name="to" data-dashboard-filter="to"></label>
           <label class="dashboard-filter dashboard-filter--search"><span>Response text</span><input type="search" name="search" placeholder="Search saved responses" autocomplete="off" data-dashboard-filter="search"></label>
+          <label class="dashboard-filter"><span>Test records</span><select name="includeTests" data-dashboard-filter="includeTests"><option value="">Exclude synthetic tests</option><option value="1">Include synthetic tests</option></select></label>
           <div class="dashboard-filter-actions"><button class="dashboard-button dashboard-button--secondary" type="submit">Apply filters</button><button class="dashboard-clear" type="button" data-dashboard-clear>Clear filters</button></div>
         </form>
         <p class="dashboard-state" data-dashboard-loading role="status" aria-live="polite">Loading responses…</p>

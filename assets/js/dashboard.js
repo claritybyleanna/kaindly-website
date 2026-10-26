@@ -7,6 +7,7 @@ const FILTER_NAMES = [
   "from",
   "to",
   "search",
+  "includeTests",
 ];
 
 function stringValue(value) {
