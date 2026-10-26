@@ -1,4 +1,5 @@
 import {createSessionCaptureGate} from "./lib/session-capture.js";
+import {SESSION_CAPTURES} from "./lib/session-capture-registry.js";
 import { handlePassphraseLogin, handlePassphraseLogout } from "./lib/dashboard-passphrase.js";
 import { next } from "@vercel/functions";
 import { handleExecutiveAlpha } from "./lib/owref2026.js";
@@ -492,7 +493,7 @@ async function existingMiddleware(
   if (isProtectedDashboardPath(url.pathname)) {
     return handleDashboardRoute(request);
   }
-  if (request.method === "GET" && isMclendonEntryPath(url.pathname)) {
+  if (["GET", "HEAD"].includes(request.method) && isMclendonEntryPath(url.pathname)) {
     const secret = process.env.MCLENDON_SESSION_SECRET;
     if (!isValidMclendonSessionSecret(secret, {
       reservedSecrets: [
@@ -643,6 +644,20 @@ async function existingMiddleware(
 const captureGate=createSessionCaptureGate();
 export default async function maintenanceMiddleware(request=new Request("https://www.kaindly.ai/")) {
   if (!isFullSiteEnvironment()) return existingMiddleware(request);
+  const url = new URL(request.url);
+  let decodedPath;
+  try { decodedPath = decodeURIComponent(url.pathname).replace(/\/{2,}/g, '/'); }
+  catch { return new Response('Invalid URL', {status:400, headers:{'cache-control':'no-store'}}); }
+  const isSession = SESSION_CAPTURES.some(s => decodedPath === s.prefix || decodedPath.startsWith(s.prefix + '/'));
+  if (isSession && decodedPath !== url.pathname) {
+    return new Response('Please open the original session link.', {status:400, headers:{'cache-control':'no-store'}});
+  }
+  if(request.method==='POST' && url.searchParams.get('kaindly-register')==='1') {
+    return await captureGate(request) || existingMiddleware(request);
+  }
+  const response=await existingMiddleware(request);
+  if(response.status!==200) return response;
   const capture=await captureGate(request);
-  return capture || existingMiddleware(request);
+  if(capture && response.headers.has('set-cookie')) capture.headers.append('set-cookie',response.headers.get('set-cookie'));
+  return capture || response;
 }

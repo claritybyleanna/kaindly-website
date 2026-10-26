@@ -257,7 +257,7 @@ test("McLendon sessions are non-identifying, signed, path-scoped, and expire aft
   assert.match(cookie, /Secure/u);
 });
 
-test("McLendon page GET issues one valid session without password gating or copy changes", async () => {
+test("McLendon page GET retains its scoped session and requires contact capture without a password", async () => {
   const keys = [
     "VERCEL_ENV",
     "MCLENDON_SESSION_SECRET",
@@ -275,7 +275,7 @@ test("McLendon page GET issues one valid session without password gating or copy
     const first = await middleware(new Request("https://www.kaindly.ai/McLendon/"));
     const setCookie = first.headers.get("set-cookie");
 
-    assert.equal(first.headers.get("x-middleware-next"), "1");
+    assert.match(await first.text(), /Save and open session/);
     assert.match(setCookie, new RegExp(`^${MCLENDON_COOKIE_NAME}=`));
     assert.match(setCookie, /Path=\/McLendon\//u);
     assert.match(setCookie, /Max-Age=28800/u);
@@ -288,7 +288,7 @@ test("McLendon page GET issues one valid session without password gating or copy
     const repeat = await middleware(new Request("https://www.kaindly.ai/McLendon/", {
       headers: { cookie: `${MCLENDON_COOKIE_NAME}=${token}` },
     }));
-    assert.equal(repeat.headers.get("x-middleware-next"), "1");
+    assert.match(await repeat.text(), /Save and open session/);
     assert.equal(repeat.headers.get("set-cookie"), null);
   } finally {
     for (const key of keys) {

@@ -60,7 +60,7 @@ test("protects OWR with its own scoped PIN session", async () => {
     const authenticated = await middleware.default(new Request("https://www.kaindly.ai/OWR/", {
       headers: { cookie: cookie.split(";", 1)[0] },
     }));
-    assert.equal(authenticated.headers.get("x-middleware-next"), "1");
+    assert.match(await authenticated.text(), /Save and open session/);
   });
 });
 

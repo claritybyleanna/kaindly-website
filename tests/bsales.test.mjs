@@ -167,7 +167,7 @@ test("Bracco Sales middleware issues and accepts only its own scoped session", a
     const allowed = await middleware(new Request("https://www.kaindly.ai/bsales/prompt-pack-1/", {
       headers: { cookie },
     }));
-    assert.equal(allowed.headers.get("x-middleware-next"), "1");
+    assert.match(await allowed.text(), /Save and open session/);
     assert.equal(allowed.headers.get("cache-control"), "private, no-store");
     assert.equal(allowed.headers.get("x-robots-tag"), "noindex, nofollow");
   } finally {

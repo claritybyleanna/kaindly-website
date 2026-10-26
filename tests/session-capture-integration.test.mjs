@@ -42,3 +42,12 @@ test('synthetic records are excluded by default but explicitly inspectable and e
  assert.deepEqual(parseDashboardFilters(new URL('https://www.kaindly.ai/dashboard/?includeTests=1')),{includeTests:true});
  assert.throws(()=>parseDashboardFilters(new URL('https://www.kaindly.ai/dashboard/?includeTests=yes')));
 });
+test('noncanonical session paths and unsupported content methods never forward to static content',async()=>{
+ for(const path of ['/%4fWR/index.html','//OWR/index.html','/Blead/%69ndex.html','/bsales//index.html','/%4dcLendon/index.html','/%6fwref2026']){
+  const res=await middleware(new Request('https://www.kaindly.ai'+path));assert.equal(res.status,400,path);assert.notEqual(res.headers.get('x-middleware-next'),'1');
+ }
+ const cookie=serializeOwrSession(await signOwrSession({secret:process.env.OWR_SESSION_SECRET,expiresAt:Date.now()+3600000})).split(';')[0];
+ for(const method of ['POST','PUT','PATCH','DELETE']){
+  const res=await middleware(new Request('https://www.kaindly.ai/OWR/index.html',{method,headers:{cookie}}));assert.equal(res.status,405,method);assert.notEqual(res.headers.get('x-middleware-next'),'1');
+ }
+});

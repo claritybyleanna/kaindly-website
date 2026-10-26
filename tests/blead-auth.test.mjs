@@ -221,7 +221,7 @@ test("Blead middleware accepts valid sessions and rejects tampered sessions", as
     const valid = await middleware(new Request("https://www.kaindly.ai/Blead/", {
       headers: { cookie: `${BLEAD_COOKIE_NAME}=${token}` },
     }));
-    assert.equal(valid.headers.get("x-middleware-next"), "1");
+    assert.match(await valid.text(), /Save and open session/);
     assert.equal(valid.headers.get("cache-control"), "private, no-store");
 
     const tampered = await middleware(new Request("https://www.kaindly.ai/Blead/", {
@@ -359,6 +359,6 @@ test("legacy facilitator redirects do not depend on old configuration", async ()
     const hub = await middleware(new Request("https://www.kaindly.ai/Blead/", {
       headers: { cookie: `${BLEAD_COOKIE_NAME}=${participant}` },
     }));
-    assert.equal(hub.headers.get("x-middleware-next"), "1");
+    assert.match(await hub.text(), /Save and open session/);
   });
 });
