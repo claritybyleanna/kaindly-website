@@ -46,6 +46,18 @@ export const bsalesContent = {
   ],
   resources: [
     {
+      id: "ai-operating-manual-pdf",
+      type: "PDF prompt pack",
+      title: "Build Your AI Operating Manual — Prompt Pack (PDF)",
+      description: "Use this prompt pack to build your AI operating manual.",
+      href: "/bsales/materials/Kaindly_AI_Operating_Manual_Prompt_Pack_10282026.pdf",
+      actionLabel: "Open prompt pack (PDF)",
+      status: "Available now",
+      state: "available",
+      privateDeploymentAsset: true,
+      sha256: "487ca8e20514a1d9dadddcb717f36f8d9496546e7f29969d7d6023a321579516",
+    },
+    {
       id: "prompt-pack-1",
       type: "Interactive prompt pack",
       title: "Demystifying AI and Your AI Brain",

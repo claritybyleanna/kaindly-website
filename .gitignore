@@ -12,3 +12,6 @@ node_modules/
 .env*
 
 /node_modules
+
+# Private session attachment: deploy locally; never commit the PDF.
+/bsales/materials/Kaindly_AI_Operating_Manual_Prompt_Pack_10282026.pdf

@@ -43,6 +43,7 @@ test("Bracco Sales hub ships the approved lightweight route bundle", async () =>
   assert.ok(html.indexOf('id="resources"') > html.indexOf('id="how-to-use"'));
   assert.ok(html.indexOf("Part 1 · Session deck") > html.indexOf('id="resources"'));
   assert.ok(html.indexOf("Part 2 · Session deck") > html.indexOf('id="resources"'));
+  assert.ok(html.indexOf("Build Your AI Operating Manual — Prompt Pack (PDF)") > html.indexOf('id="resources"'));
   assert.match(html, /The session is broken into two sections/u);
   assert.equal((html.match(/Kaindly_Bracco_Prompt_Pack_1_Demystifying_AI_and_Your_AI_Brain\.docx/gu) ?? []).length, 2);
   assert.equal((html.match(/Kaindly_Bracco_Prompt_Pack_2_Your_AI_Chief_of_Staff\.docx/gu) ?? []).length, 2);
@@ -66,7 +67,7 @@ test("Bracco Sales agenda and deck order match the live session", async () => {
     "9:45 – 10:30",
     "10:30 – 10:45",
   ]);
-  assert.equal(bsalesContent.resources.length, 4);
+  assert.equal(bsalesContent.resources.length, 5);
   assert.ok(bsalesContent.resources.every(({ state }) => state === "available"));
 });
 

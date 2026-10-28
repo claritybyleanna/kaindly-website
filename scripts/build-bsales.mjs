@@ -66,6 +66,16 @@ function exerciseResourceCard({ exercise, promptPack, deck }, index) {
   </article>`;
 }
 
+function pdfResourceCard(resource) {
+  return `<article class="blead-resource blead-resource--positive">
+    <span class="blead-resource-type">PDF prompt pack</span>
+    <h3>${escapeHtml(resource.title)}</h3>
+    <p>${escapeHtml(resource.description)}</p>
+    <span class="blead-resource-status">Available now</span>
+    <a class="blead-resource-download" href="${escapeHtml(resource.href)}" target="_blank" rel="noopener">${escapeHtml(resource.actionLabel)}</a>
+  </article>`;
+}
+
 export function renderBsalesHub(content) {
   const promptResources = content.resources.filter((resource) => resource.type === "Interactive prompt pack");
   const deckResources = content.resources.filter((resource) => resource.type.includes("Session deck"));
@@ -95,7 +105,7 @@ export function renderBsalesHub(content) {
     <section class="blead-section blead-section--tinted" id="agenda" aria-labelledby="agenda-title"><div class="blead-shell bsales-agenda-layout"><div><p class="blead-kicker">Today’s session</p><h2 id="agenda-title">Today’s agenda</h2><p>Part 1 builds the foundation and your AI brain. Part 2 turns that foundation into a coaching chief of staff.</p></div><ol class="bsales-agenda-list">${content.agenda.map(agendaItem).join("")}</ol></div></section>
     <section class="blead-section" id="materials" aria-labelledby="materials-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Interactive prompt packs</p><h2 id="materials-title">Work through the session</h2></div><p>Open each prompt pack to work through it online, or download the original Word version.</p></div><div class="bsales-resource-grid">${promptResources.map(resourceCard).join("")}</div></div></section>
     <section class="blead-section blead-section--tinted" id="how-to-use" aria-labelledby="how-to-use-title"><div class="blead-shell bsales-how-to"><div><p class="blead-kicker">How to use this hub</p><h2 id="how-to-use-title">Open, personalize, copy</h2></div><ol><li><strong>Choose a prompt pack.</strong><span>Start with Pack 1, then build on it with Pack 2.</span></li><li><strong>Open the prompt you need.</strong><span>Fill in any bracketed fields that apply to your situation.</span></li><li><strong>Copy it into Microsoft Copilot.</strong><span>Review every output before you use or save it.</span></li></ol></div></section>
-    <section class="blead-section" id="resources" aria-labelledby="resources-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Resources</p><h2 id="resources-title">The session is broken into two sections</h2></div><p>Each exercise includes its matching Word prompt pack and presentation deck.</p></div><div class="blead-resource-grid">${exerciseResources.map(exerciseResourceCard).join("")}</div></div></section>
+    <section class="blead-section" id="resources" aria-labelledby="resources-title"><div class="blead-shell"><div class="blead-section-heading"><div><p class="blead-kicker">Resources</p><h2 id="resources-title">The session is broken into two sections</h2></div><p>Each exercise includes its matching Word prompt pack and presentation deck.</p></div><div class="blead-resource-grid">${exerciseResources.map(exerciseResourceCard).join("")}${content.resources.filter(resource => resource.type === "PDF prompt pack").map(pdfResourceCard).join("")}</div></div></section>
   </main>
   ${footer()}
   <script type="module" src="/assets/js/bsales.js?v=20261015"></script>
