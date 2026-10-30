@@ -82,6 +82,11 @@ test('native slide download requires both workshop access and the existing captu
   process.env.VERCEL_ENV='production';
   const middleware=(await import('../middleware.js')).default;
   const url='https://www.kaindly.ai/owref2026/materials/Executive-Alpha-v4-20261022-web.pdf';
+  for(const suffix of ['/', '/index.html', '.backup']) {
+    const unknown=await middleware(new Request(url+suffix));
+    assert.equal(unknown.status,404);
+    assert.notEqual(unknown.headers.get('x-middleware-next'),'1');
+  }
   const anonymous=await middleware(new Request(url));
   assert.notEqual(anonymous.headers.get('x-middleware-next'),'1');
   assert.match(await anonymous.text(),/type="password"/);

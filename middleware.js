@@ -481,6 +481,9 @@ async function existingMiddleware(
   if (url.pathname === "/owref2026" || url.pathname === "/owref2026/" || url.pathname === "/owref2026/index.html" || url.pathname === executiveAlphaSlides.href) {
     return handleExecutiveAlpha(request);
   }
+  if (url.pathname.startsWith("/owref2026/")) {
+    return new Response("Not found", {status:404, headers:{"Cache-Control":"private, no-store"}});
+  }
   if (
     url.pathname === "/Blead/facilitator"
     || url.pathname === "/Blead/facilitator/"
