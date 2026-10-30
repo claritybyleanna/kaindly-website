@@ -15,3 +15,6 @@ node_modules/
 
 # Private session attachment: deploy locally; never commit the PDF.
 /bsales/materials/Kaindly_AI_Operating_Manual_Prompt_Pack_10282026.pdf
+
+# Private Barbara session presentation, provisioned only for deployment.
+/owref2026/materials/Executive-Alpha-v4-20261022-web.pdf

@@ -2,6 +2,7 @@ import {createSessionCaptureGate} from "./lib/session-capture.js";
 import {SESSION_CAPTURES} from "./lib/session-capture-registry.js";
 import { handlePassphraseLogin, handlePassphraseLogout } from "./lib/dashboard-passphrase.js";
 import { next } from "@vercel/functions";
+import { executiveAlphaSlides } from "./lib/owref2026-resources.js";
 import { handleExecutiveAlpha } from "./lib/owref2026.js";
 import { authorizeDashboardRequest } from "./lib/dashboard-auth.js";
 import {
@@ -477,7 +478,7 @@ async function existingMiddleware(
   if (!isFullSiteEnvironment()) return maintenanceResponse();
 
   const url = new URL(request.url);
-  if (url.pathname === "/owref2026" || url.pathname === "/owref2026/" || url.pathname === "/owref2026/index.html") {
+  if (url.pathname === "/owref2026" || url.pathname === "/owref2026/" || url.pathname === "/owref2026/index.html" || url.pathname === executiveAlphaSlides.href) {
     return handleExecutiveAlpha(request);
   }
   if (

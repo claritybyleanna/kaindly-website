@@ -57,3 +57,44 @@ test('protected index entry keeps password posts and redirects on the native ent
   const post=new Request(req.url,{method:'POST',headers:{origin:'https://www.kaindly.ai','content-type':'application/x-www-form-urlencoded'},body:'password=test-only-password'});
   assert.equal((await handle(post)).headers.get('location'),'/owref2026/index.html');
 });
+
+test('session slides are offered only after authentication and direct downloads stay protected',async()=>{
+ const path='/owref2026/materials/Executive-Alpha-v4-20261022-web.pdf';
+ const anonymous=await handle(new Request('https://www.kaindly.ai'+path));
+ assert.match(await anonymous.text(),/type="password"/);
+ assert.notEqual(anonymous.headers.get('x-middleware-next'),'1');
+ const login=await handle(request('POST','test-only-password'));
+ const cookie=login.headers.get('set-cookie').split(';')[0];
+ const page=await handle(request('GET',undefined,cookie));
+ assert.match(await page.text(),/Barbara&#39;s Session Slides \(PDF\)/);
+ const download=await handle(new Request('https://www.kaindly.ai'+path,{headers:{cookie}}));
+ assert.equal(download.headers.get('x-middleware-next'),'1');
+ assert.match(download.headers.get('content-disposition'),/attachment/);
+ assert.match(download.headers.get('cache-control'),/no-store/);
+ assert.equal((await handle(new Request('https://www.kaindly.ai'+path,{method:'POST',headers:{cookie}}))).status,405);
+});
+
+test('native slide download requires both workshop access and the existing capture receipt',async()=>{
+ const envNames=['OWREF2026_PASSWORD_VERIFIER','OWREF2026_SESSION_SECRET','OWREF2026_CONTENT_KEY'];
+ const before=envNames.map(key=>process.env[key]);
+ try {
+  [process.env.OWREF2026_PASSWORD_VERIFIER,process.env.OWREF2026_SESSION_SECRET,process.env.OWREF2026_CONTENT_KEY]=[config.verifier,config.secret,config.contentKey];
+  process.env.VERCEL_ENV='production';
+  const middleware=(await import('../middleware.js')).default;
+  const url='https://www.kaindly.ai/owref2026/materials/Executive-Alpha-v4-20261022-web.pdf';
+  const anonymous=await middleware(new Request(url));
+  assert.notEqual(anonymous.headers.get('x-middleware-next'),'1');
+  assert.match(await anonymous.text(),/type="password"/);
+  const auth=(await handle(request('POST','test-only-password'))).headers.get('set-cookie').split(';')[0];
+  const pending=await middleware(new Request(url,{headers:{cookie:auth}}));
+  assert.notEqual(pending.headers.get('x-middleware-next'),'1');
+  assert.match(await pending.text(),/Save and open session/);
+  const {createSessionCaptureGate}=await import('../lib/session-capture.js');
+  const gate=createSessionCaptureGate({save:async()=>[{participant_id:'mock-local-only'}]});
+  const receipt=await gate(new Request(url+'?kaindly-register=1',{method:'POST',headers:{cookie:auth,origin:'https://www.kaindly.ai','content-type':'application/x-www-form-urlencoded'},body:'name=Local+Fixture&email=local-fixture%40example.com'}));
+  const cookies=auth+'; '+receipt.headers.get('set-cookie').split(';')[0];
+  const ready=await middleware(new Request(url,{headers:{cookie:cookies}}));
+  assert.equal(ready.headers.get('x-middleware-next'),'1');
+  assert.equal(ready.headers.get('content-type'),'application/pdf');
+ } finally {envNames.forEach((key,index)=>before[index]===undefined?delete process.env[key]:process.env[key]=before[index]);}
+});

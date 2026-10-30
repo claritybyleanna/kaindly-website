@@ -1,5 +1,6 @@
 import { cp, mkdir, rm, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
+import { executiveAlphaSlides } from "../lib/owref2026-resources.js";
 import { bsalesContent } from "../bsales/content.js";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -17,6 +18,7 @@ export const PUBLIC_PATHS = Object.freeze([
   "bsales",
   "McLendon",
   "OWR",
+  "owref2026",
   "collective",
   "contact",
   "dashboard",
@@ -44,6 +46,13 @@ export async function buildStaticOutput({
       if (createHash("sha256").update(bytes).digest("hex") !== resource.sha256) {
         throw new Error("Private session attachment does not match its approved checksum");
       }
+    }
+  }
+
+  if (publicPaths.includes("owref2026")) {
+    const bytes = await readFile(resolve(root, "." + executiveAlphaSlides.href));
+    if (createHash("sha256").update(bytes).digest("hex") !== executiveAlphaSlides.sha256) {
+      throw new Error("Barbara session slides do not match the approved attachment checksum");
     }
   }
 
